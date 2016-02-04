@@ -65,7 +65,7 @@ Node :: run() {
 		auto self = (Node*)timer->data;
 		self->periodic();
 	},
-	1000, 1000);
+	100, 100);
 	if (uv_run(m_uv_loop.get(), UV_RUN_DEFAULT) < 0) {
 		LOG(ERROR) << "failed to run event loop";
 		return;
@@ -90,7 +90,14 @@ Node ::	on_connect(uv_stream_t* server, int status) {
 
 void
 Node :: periodic() {
-	LOG(INFO) << "periodic run for node (id " << m_id << ")";
+	uint64_t now = uv_hrtime();
+	if (m_trusted_peer == m_id) {
+		// Currently the leader.
+		m_last_leader_active = now;
+
+		// TODO
+		// - send out heartbeats
+	}
 
 	// Clean up the registry
 	m_peer_registry->cleanup();
@@ -102,6 +109,24 @@ Node :: periodic() {
 			" from index " << msg->source;
 
 		handle_message(msg.get());
+	}
+
+	if (now - m_last_leader_active > leader_timeout_ns) {
+		LOG(INFO) << "leader timed out";
+		auto next_trusted = m_peer_registry->trusted_after(m_trusted_peer);
+		if (next_trusted == 0) {
+			LOG(INFO) << "no more peers to trust; trusting self (id " << m_id << ")";
+			next_trusted = m_id;
+		} else {
+			if (next_trusted > m_id) {
+				LOG(INFO) << "trusting self (id " << m_id << ")";
+				next_trusted = m_id;
+			} else {
+				LOG(INFO) << "trusting id " << next_trusted;
+			}
+		}
+		m_trusted_peer = next_trusted;
+		m_last_leader_active = now;
 	}
 }
 

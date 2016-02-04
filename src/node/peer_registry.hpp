@@ -21,6 +21,9 @@ public:
 	{
 		peer->set_index(index);
 		m_peers[index] = peer;
+		if (peer->id() > 0) {
+			m_peer_id_index[peer->id()] = index;
+		}
 	}
 
 	void
@@ -45,6 +48,18 @@ public:
 				break;
 			}
 		}
+		m_peer_id_index[id] = index;
+	}
+
+	uint64_t
+	trusted_after(const uint64_t id)
+	{
+		for (auto i = std::begin(m_peer_id_index); i != std::end(m_peer_id_index); ++i) {
+			if (i->first >= id) {
+				return i->first;
+			}
+		}
+		return 0;
 	}
 
 	void
@@ -54,6 +69,11 @@ public:
 			if (i->second == nullptr) {
 				i = m_peers.erase(i);
 			} else if (i->second->done()) {
+				auto id = i->second->id();
+				auto id_index_it = m_peer_id_index.find(id);
+				if (id_index_it != m_peer_id_index.end()) {
+					m_peer_id_index.erase(id_index_it);
+				}
 				i = m_peers.erase(i);
 			} else {
 				++i;
@@ -63,4 +83,5 @@ public:
 
 private:
 	std::unordered_map<int, shared_peer> m_peers;
+	std::map<uint64_t, int>              m_peer_id_index;
 }; // PeerRegistry

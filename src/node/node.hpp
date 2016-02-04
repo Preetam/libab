@@ -1,6 +1,5 @@
 #pragma once
 
-#include <chrono>
 #include <thread>
 #include <memory>
 #include <cerrno>
@@ -9,10 +8,13 @@
 #include <glog/logging.h>
 #include <cpl/net/sockaddr.hpp>
 
+#include "role.hpp"
 #include "peer/peer.hpp"
 #include "peer_registry.hpp"
 #include "message_queue/message_queue.hpp"
 #include "message/identity_message.hpp"
+
+const int leader_timeout_ns = 500e6; // 500 ms == 0.5 sec
 
 class Node
 {
@@ -22,8 +24,12 @@ public:
 	, m_cluster_size(cluster_size)
 	, m_peer_registry(std::make_unique<PeerRegistry>())
 	, m_mq(std::make_shared<Message_Queue>())
+	, m_trusted_peer(0)
+	, m_last_leader_active(uv_hrtime())
+	, m_role(nullptr)
 	{
 		LOG(INFO) << "Node initialized with cluster size " << m_cluster_size;
+		LOG(INFO) << "leader last active " << m_last_leader_active;
 	}
 
 	// start starts a node listening at address.
@@ -53,7 +59,8 @@ private:
 	int                                   m_cluster_size;
 
 	uint64_t                              m_trusted_peer;
-	std::chrono::steady_clock::time_point m_last_leader_active;
+	uint64_t                              m_last_leader_active;
+	std::unique_ptr<Role>                 m_role; // TODO
 
 	void
 	periodic();

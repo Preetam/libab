@@ -75,7 +75,6 @@ Peer :: init_loop_handles()
 void
 Peer :: periodic()
 {
-	LOG(INFO) << "periodic run for peer (index " << m_index << ")";
 	if (!m_active) {
 		// We don't have an active connection. The only thing we can do is attempt
 		// a reconnection.
