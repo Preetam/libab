@@ -12,19 +12,6 @@
 const std::string NAME    = "sacq";
 const std::string VERSION = "DEV";
 
-void new_conn_cb(uv_stream_t* server, int status) {
-	if (status < 0) {
-		LOG(ERROR) << "couldn't get a new connection";
-	} else {
-		LOG(INFO) << "got a new connection. accepting...";
-		uv_tcp_t client;
-		uv_tcp_init(server->loop, &client);
-		if (uv_accept(server, (uv_stream_t*)&client) < 0) {
-			LOG(ERROR) << "couldn't accept connection";
-		}
-	}
-}
-
 int
 main(int argc, char* argv[]) {
 	// Logging setup.
