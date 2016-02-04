@@ -55,7 +55,7 @@ public:
 	trusted_after(const uint64_t id)
 	{
 		for (auto i = std::begin(m_peer_id_index); i != std::end(m_peer_id_index); ++i) {
-			if (i->first >= id) {
+			if (i->first > id) {
 				return i->first;
 			}
 		}
