@@ -92,6 +92,9 @@ public:
 	void
 	send(const Message* msg)
 	{
+		if (!m_active) {
+			return;
+		}
 		int size = msg->packed_size();
 		auto buf = new uint8_t[size];
 		uv_buf_t a[] = {

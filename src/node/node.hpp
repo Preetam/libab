@@ -13,8 +13,9 @@
 #include "peer_registry.hpp"
 #include "message_queue/message_queue.hpp"
 #include "message/identity_message.hpp"
+#include "message/leader_message.hpp"
 
-const int leader_timeout_ns = 500e6; // 500 ms == 0.5 sec
+const uint64_t leader_timeout_ns = 1e9;
 
 class Node
 {
@@ -73,4 +74,7 @@ private:
 
 	void
 	handle_ident(const Message&);
+
+	void
+	handle_leader_active(const Message&);
 }; // Node

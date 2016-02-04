@@ -95,8 +95,8 @@ Node :: periodic() {
 		// Currently the leader.
 		m_last_leader_active = now;
 
-		// TODO
-		// - send out heartbeats
+		LeaderActiveMessage active_msg(m_id);
+		m_peer_registry->broadcast(&active_msg);
 	}
 
 	// Clean up the registry
@@ -105,14 +105,17 @@ Node :: periodic() {
 	// Process messages
 	while (m_mq->size() > 0) {
 		auto msg = m_mq->pop();
-		LOG(INFO) << "got a new message of type " << MSG_STR(msg->type) <<
-			" from index " << msg->source;
+		//LOG(INFO) << "got a new message of type " << MSG_STR(msg->type) <<
+		//	" from index " << msg->source;
 
 		handle_message(msg.get());
 	}
 
-	if (now - m_last_leader_active > leader_timeout_ns) {
-		LOG(INFO) << "leader timed out";
+	now = uv_hrtime();
+	auto since_last_leader_active = now - m_last_leader_active;
+	if (since_last_leader_active > leader_timeout_ns) {
+		LOG(INFO) << "leader timed out after " << since_last_leader_active << " ns";
+		LOG(INFO) << "now: " << now << ", last active: " << m_last_leader_active;
 		auto next_trusted = m_peer_registry->trusted_after(m_trusted_peer);
 		if (next_trusted == 0) {
 			LOG(INFO) << "no more peers to trust; trusting self (id " << m_id << ")";
@@ -136,6 +139,9 @@ Node :: handle_message(const Message* msg) {
 	case MSG_IDENT:
 		handle_ident(*msg);
 		break;
+	case MSG_LEADER_ACTIVE:
+		handle_leader_active(*msg);
+		break;
 	}
 }
 
@@ -145,4 +151,17 @@ Node :: handle_ident(const Message& msg) {
 	m_peer_registry->set_identity(ident_msg.source, ident_msg.id, ident_msg.address);
 	LOG(INFO) << ident_msg.source << " has ID " << ident_msg.id << " and address " <<
 		ident_msg.address;
+}
+
+void
+Node :: handle_leader_active(const Message& msg) {
+	auto leader_active_msg = static_cast<const LeaderActiveMessage&>(msg);
+	auto leader_id = leader_active_msg.id;
+	if (leader_id < m_trusted_peer) {
+		m_trusted_peer = leader_id;
+		LOG(INFO) << "trusting id " << leader_id;
+	}
+	if (leader_id == m_trusted_peer) {
+		m_last_leader_active = uv_hrtime();
+	}
 }

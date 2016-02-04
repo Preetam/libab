@@ -63,6 +63,14 @@ public:
 	}
 
 	void
+	broadcast(const Message* msg)
+	{
+		for (auto i = std::begin(m_peers); i != std::end(m_peers); ++i) {
+			i->second->send(msg);
+		}
+	}
+
+	void
 	cleanup()
 	{
 		for (auto i = std::begin(m_peers); i != std::end(m_peers); ) {

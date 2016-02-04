@@ -27,7 +27,7 @@ Peer :: run() {
 				});
 				return;
 			}
-			LOG(INFO) << "got " << nread << " bytes of data";
+			//LOG(INFO) << "got " << nread << " bytes of data";
 			for (int i = 0; i < nread; i++) {
 				peer->m_read_buf.push_back(buf->base[i]);
 				peer->m_pending_msg_size++;
@@ -48,8 +48,7 @@ Peer :: run() {
 void
 Peer :: process_message_data(uint8_t* data, int size)
 {
-	// TODO
-	LOG(INFO) << "processing message data of size " << size;
+	//LOG(INFO) << "processing message data of size " << size;
 
 	std::unique_ptr<Message> m;
 	if (decode_message(m, data, size) >= 0) {
