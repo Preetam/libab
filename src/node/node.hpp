@@ -76,5 +76,11 @@ private:
 	handle_ident(const Message&);
 
 	void
+	handle_ident_request(const Message&);
+
+	void
 	handle_leader_active(const Message&);
+
+	void
+	handle_leader_active_ack(const Message&);
 }; // Node

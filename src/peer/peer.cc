@@ -16,7 +16,7 @@ Peer :: run() {
 			if (nread < 0) {
 				uv_close((uv_handle_t*)stream, [](uv_handle_t* handle) {
 					auto self = (Peer*)handle->data;
-					LOG(INFO) << "connection closed";
+					LOG(INFO) << "connection closed (handle " << handle << ")";
 					self->m_active = false;
 					if (self->m_valid) {
 						self->m_tcp = nullptr;
@@ -27,7 +27,7 @@ Peer :: run() {
 				});
 				return;
 			}
-			//LOG(INFO) << "got " << nread << " bytes of data";
+			DLOG(INFO) << "got " << nread << " bytes of data from " << peer->m_index;
 			for (int i = 0; i < nread; i++) {
 				peer->m_read_buf.push_back(buf->base[i]);
 				peer->m_pending_msg_size++;
@@ -122,8 +122,10 @@ Peer :: reconnect()
 				delete req;
 				return;
 			}
-			((Peer*)req->data)->run();
-			((Peer*)req->data)->m_active = true;
+			auto self = (Peer*)req->data;
+			self->run();
+			self->m_active = true;
+			self->send(&(self->m_node_ident_msg));
 			delete req;
 		});
 }

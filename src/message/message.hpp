@@ -20,7 +20,9 @@ enum MESSAGE_TYPE : uint8_t
 	// Identification
 	MSG_IDENT,
 	// Active leader
-	MSG_LEADER_ACTIVE
+	MSG_LEADER_ACTIVE,
+	// Active leader acknowledgement
+	MSG_LEADER_ACTIVE_ACK
 };
 
 inline
@@ -31,6 +33,7 @@ const char* MSG_STR(uint8_t type) {
 	case MSG_IDENT_REQUEST: return "MSG_IDENT_REQUEST";
 	case MSG_IDENT: return "MSG_IDENT";
 	case MSG_LEADER_ACTIVE: return "MSG_LEADER_ACTIVE";
+	case MSG_LEADER_ACTIVE_ACK: return "MSG_LEADER_ACTIVE_ACK";
 	}
 
 	return "MSG_INVALID";
@@ -91,9 +94,6 @@ public:
 	{
 		return 0;
 	}
-
-	virtual std::unique_ptr<Message>
-	clone() = 0;
 
 	virtual int
 	pack_body(uint8_t* dest, int dest_len) const = 0;

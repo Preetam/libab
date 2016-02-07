@@ -44,12 +44,33 @@ public:
 		return 0;
 	}
 
-	std::unique_ptr<Message>
-	clone()
-	{
-		return std::make_unique<LeaderActiveMessage>(id);
-	}
-
 public:
 	uint64_t id;
+};
+
+class LeaderActiveAck : public Message
+{
+public:
+	LeaderActiveAck()
+	: Message(MSG_LEADER_ACTIVE_ACK)
+	{
+	}
+
+	inline int
+	body_size() const
+	{
+		return 0;
+	}
+
+	inline int
+	pack_body(uint8_t* dest, int dest_len) const
+	{
+		return 0;
+	}
+
+	inline int
+	unpack_body(uint8_t* src, int src_len)
+	{
+		return 0;
+	}
 };

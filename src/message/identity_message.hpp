@@ -55,12 +55,6 @@ public:
 		return 0;
 	}
 
-	std::unique_ptr<Message>
-	clone()
-	{
-		return std::make_unique<IdentityRequest>(id, address);
-	}
-
 public:
 	uint64_t id;
 	std::string address;
@@ -113,12 +107,6 @@ public:
 		}
 		address = std::string((const char*)src, address_size);
 		return 0;
-	}
-
-	std::unique_ptr<Message>
-	clone()
-	{
-		return std::make_unique<IdentityMessage>(id, address);
 	}
 
 public:

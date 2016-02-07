@@ -7,30 +7,36 @@
 #include <cpl/net/sockaddr.hpp>
 #include "message_queue/message_queue.hpp"
 #include "message/decode.hpp"
+#include "message/identity_message.hpp"
 
 const int READ_BUFFER_SIZE = 16*1024;
 
 class Peer
 {
 public:
-	Peer(std::unique_ptr<uv_tcp_t> conn, std::shared_ptr<Message_Queue> mq)
+	Peer(std::unique_ptr<uv_tcp_t> conn, std::shared_ptr<Message_Queue> mq,
+		 IdentityMessage node_ident_msg)
 	: m_active(true)
 	, m_tcp(std::move(conn))
 	, m_mq(mq)
 	, m_valid(false)
+	, m_node_ident_msg(node_ident_msg)
 	{
+		LOG(INFO) << "Peer(1) = " << this << ", TCP = " << m_tcp.get();
 		init_loop_handles();
 		run();
 	}
 
 	Peer(cpl::net::SockAddr& addr, std::unique_ptr<uv_tcp_t> conn,
-		 std::shared_ptr<Message_Queue> mq)
+		 std::shared_ptr<Message_Queue> mq, IdentityMessage node_ident_msg)
 	: m_active(false)
 	, m_tcp(std::move(conn))
 	, m_mq(mq)
 	, m_valid(true)
 	, m_address(addr.str())
+	, m_node_ident_msg(node_ident_msg)
 	{
+		LOG(INFO) << "Peer(2) = " << this << ", TCP = " << m_tcp.get();
 		init_loop_handles();
 
 		auto req = new uv_connect_t;
@@ -50,6 +56,7 @@ public:
 				}
 				self->m_active = true;
 				self->run();
+				self->send(&self->m_node_ident_msg);
 				delete req;
 			});
 	}
@@ -60,21 +67,28 @@ public:
 		return m_id;
 	}
 
+	std::string&
+	address()
+	{
+		return m_address;
+	}
+
 	Peer& operator =(Peer& rhs) = delete; // Disable copying.
 
 	Peer& operator =(Peer&& rhs)
 	{
 		// Close the old TCP stream if it's active.
-		if (m_active && m_tcp != nullptr) {
+		if (m_tcp != nullptr) {
 			auto old_stream = m_tcp.release();
 			uv_close((uv_handle_t*)old_stream, [](uv_handle_t* handle) {
+				LOG(INFO) << "handle " << handle << " closed";
 				delete handle;
 			});
 		}
 		m_tcp = std::move(rhs.m_tcp);
 		m_tcp->data = this;
-		m_valid = rhs.m_valid;
 		m_address = rhs.m_address;
+		m_valid = true;
 		m_active = true;
 		rhs.m_valid = false;
 		rhs.m_active = false;
@@ -92,7 +106,8 @@ public:
 	void
 	send(const Message* msg)
 	{
-		if (!m_active) {
+		if (!m_active || m_tcp == nullptr) {
+			LOG(WARNING) << "!!! skipping send to " << m_index << " MSG = " << MSG_STR(msg->type);
 			return;
 		}
 		int size = msg->packed_size();
@@ -114,6 +129,7 @@ public:
 	set_index(int index)
 	{
 		m_index = index;
+		LOG(INFO) << "Peer index " << index << " with handle " << m_tcp.get();
 	}
 
 	bool
@@ -129,6 +145,7 @@ public:
 		uv_close((uv_handle_t*)handle, [](uv_handle_t* handle) {
 			delete handle;
 		});
+		LOG(INFO) << "~Peer() " << this;
 	}
 
 private:
@@ -158,6 +175,7 @@ private:
 	uint64_t                       m_id;
 	std::string                    m_address;
 	uint64_t                       m_last_reconnect;
+	IdentityMessage                m_node_ident_msg;
 
 	char                           m_alloc_buf[READ_BUFFER_SIZE];
 	std::vector<uint8_t>           m_read_buf;

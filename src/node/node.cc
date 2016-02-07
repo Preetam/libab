@@ -49,10 +49,10 @@ Node :: connect_to_peer(cpl::net::SockAddr& addr) {
 		return;
 	}
 
-	auto peer = std::make_shared<Peer>(addr, std::move(handle), m_mq);
 	IdentityMessage ident_msg(m_id, m_listen_address);
-	peer->send(&ident_msg);
+	auto peer = std::make_shared<Peer>(addr, std::move(handle), m_mq, ident_msg);
 	m_peer_registry->register_peer(++m_index_counter, peer);
+	peer->send(&ident_msg);
 	return;
 }
 
@@ -65,7 +65,7 @@ Node :: run() {
 		auto self = (Node*)timer->data;
 		self->periodic();
 	},
-	100, 100);
+	1000, 1000);
 	if (uv_run(m_uv_loop.get(), UV_RUN_DEFAULT) < 0) {
 		LOG(ERROR) << "failed to run event loop";
 		return;
@@ -82,10 +82,10 @@ Node ::	on_connect(uv_stream_t* server, int status) {
 	auto client = std::make_unique<uv_tcp_t>();
 	uv_tcp_init(server->loop, client.get());
 	uv_accept(server, (uv_stream_t*)client.get());
-	auto peer = std::make_shared<Peer>(std::move(client), self->m_mq);
 	IdentityMessage ident_msg(self->m_id, self->m_listen_address);
-	peer->send(&ident_msg);
+	auto peer = std::make_shared<Peer>(std::move(client), self->m_mq, ident_msg);
 	self->m_peer_registry->register_peer(++self->m_index_counter, peer);
+	peer->send(&ident_msg);
 }
 
 void
@@ -105,17 +105,14 @@ Node :: periodic() {
 	// Process messages
 	while (m_mq->size() > 0) {
 		auto msg = m_mq->pop();
-		//LOG(INFO) << "got a new message of type " << MSG_STR(msg->type) <<
-		//	" from index " << msg->source;
-
 		handle_message(msg.get());
 	}
 
 	now = uv_hrtime();
 	auto since_last_leader_active = now - m_last_leader_active;
 	if (since_last_leader_active > leader_timeout_ns) {
-		LOG(INFO) << "leader timed out after " << since_last_leader_active << " ns";
-		LOG(INFO) << "now: " << now << ", last active: " << m_last_leader_active;
+		DLOG(INFO) << "leader timed out after " << since_last_leader_active << " ns";
+		DLOG(INFO) << "now: " << now << ", last active: " << m_last_leader_active;
 		auto next_trusted = m_peer_registry->trusted_after(m_trusted_peer);
 		if (next_trusted == 0) {
 			LOG(INFO) << "no more peers to trust; trusting self (id " << m_id << ")";
@@ -135,12 +132,19 @@ Node :: periodic() {
 
 void
 Node :: handle_message(const Message* msg) {
+	LOG(INFO) << "got message " << MSG_STR(msg->type) << " from index " << msg->source;
 	switch (msg->type) {
 	case MSG_IDENT:
 		handle_ident(*msg);
 		break;
+	case MSG_IDENT_REQUEST:
+		handle_ident_request(*msg);
+		break;
 	case MSG_LEADER_ACTIVE:
 		handle_leader_active(*msg);
+		break;
+	case MSG_LEADER_ACTIVE_ACK:
+		handle_leader_active_ack(*msg);
 		break;
 	}
 }
@@ -154,6 +158,12 @@ Node :: handle_ident(const Message& msg) {
 }
 
 void
+Node :: handle_ident_request(const Message& msg) {
+	IdentityMessage ident_msg(m_id, m_listen_address);
+	m_peer_registry->send(msg.source, &ident_msg);
+}
+
+void
 Node :: handle_leader_active(const Message& msg) {
 	auto leader_active_msg = static_cast<const LeaderActiveMessage&>(msg);
 	auto leader_id = leader_active_msg.id;
@@ -163,5 +173,14 @@ Node :: handle_leader_active(const Message& msg) {
 	}
 	if (leader_id == m_trusted_peer) {
 		m_last_leader_active = uv_hrtime();
+		// Acknowledge leadership.
+		LOG(INFO) << "acking leadership";
+		LeaderActiveAck ack;
+		m_peer_registry->send(leader_active_msg.source, &ack);
 	}
+}
+
+void
+Node :: handle_leader_active_ack(const Message& msg) {
+	LOG(INFO) << "got ack of active leadership";
 }

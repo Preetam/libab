@@ -89,6 +89,9 @@ decode_message(std::unique_ptr<Message>& m, uint8_t* src, int src_len) {
 	case MSG_LEADER_ACTIVE:
 		m = std::make_unique<LeaderActiveMessage>();
 		break;
+	case MSG_LEADER_ACTIVE_ACK:
+		m = std::make_unique<LeaderActiveMessage>();
+		break;
 	default:
 		return -1;
 	}

@@ -29,12 +29,6 @@ public:
 	{
 		return 0;
 	}
-
-	std::unique_ptr<Message>
-	clone()
-	{
-		return std::make_unique<PingMessage>();
-	}
 };
 
 class PongMessage : public Message
@@ -61,12 +55,6 @@ public:
 	unpack_body(uint8_t* src, int src_len)
 	{
 		return 0;
-	}
-
-	std::unique_ptr<Message>
-	clone()
-	{
-		return std::make_unique<PongMessage>();
 	}
 };
 
