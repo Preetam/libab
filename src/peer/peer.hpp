@@ -145,7 +145,7 @@ public:
 		uv_close((uv_handle_t*)handle, [](uv_handle_t* handle) {
 			delete handle;
 		});
-		LOG(INFO) << "~Peer() " << this;
+		DLOG(INFO) << "~Peer() " << this;
 	}
 
 private:

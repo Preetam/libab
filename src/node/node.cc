@@ -174,7 +174,7 @@ Node :: handle_leader_active(const Message& msg) {
 	if (leader_id == m_trusted_peer) {
 		m_last_leader_active = uv_hrtime();
 		// Acknowledge leadership.
-		LOG(INFO) << "acking leadership";
+		DLOG(INFO) << "acking leadership";
 		LeaderActiveAck ack;
 		m_peer_registry->send(leader_active_msg.source, &ack);
 	}
