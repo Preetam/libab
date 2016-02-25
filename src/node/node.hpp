@@ -27,7 +27,7 @@ public:
 	, m_mq(std::make_shared<Message_Queue>())
 	, m_trusted_peer(0)
 	, m_last_leader_active(uv_hrtime())
-	, m_role(nullptr)
+	, m_role(std::make_unique<Role>(*m_peer_registry))
 	{
 		LOG(INFO) << "Node initialized with cluster size " << m_cluster_size;
 		LOG(INFO) << "leader last active " << m_last_leader_active;

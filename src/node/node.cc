@@ -91,6 +91,7 @@ Node ::	on_connect(uv_stream_t* server, int status) {
 void
 Node :: periodic() {
 	uint64_t now = uv_hrtime();
+	m_role->periodic(now);
 	if (m_trusted_peer == m_id) {
 		// Currently the leader.
 		m_last_leader_active = now;

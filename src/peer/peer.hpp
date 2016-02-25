@@ -73,7 +73,9 @@ public:
 		return m_address;
 	}
 
-	Peer& operator =(Peer& rhs) = delete; // Disable copying.
+	// Disable copying.
+	Peer(const Peer& rhs) = delete;
+	Peer& operator =(Peer& rhs) = delete;
 
 	Peer& operator =(Peer&& rhs)
 	{
