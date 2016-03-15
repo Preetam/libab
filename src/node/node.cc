@@ -90,16 +90,6 @@ Node ::	on_connect(uv_stream_t* server, int status) {
 
 void
 Node :: periodic() {
-	uint64_t now = uv_hrtime();
-	m_role->periodic(now);
-	if (m_trusted_peer == m_id) {
-		// Currently the leader.
-		m_last_leader_active = now;
-
-		LeaderActiveMessage active_msg(m_id);
-		m_peer_registry->broadcast(&active_msg);
-	}
-
 	// Clean up the registry
 	m_peer_registry->cleanup();
 
@@ -109,79 +99,30 @@ Node :: periodic() {
 		handle_message(msg.get());
 	}
 
-	now = uv_hrtime();
-	auto since_last_leader_active = now - m_last_leader_active;
-	if (since_last_leader_active > leader_timeout_ns) {
-		DLOG(INFO) << "leader timed out after " << since_last_leader_active << " ns";
-		DLOG(INFO) << "now: " << now << ", last active: " << m_last_leader_active;
-		auto next_trusted = m_peer_registry->trusted_after(m_trusted_peer);
-		if (next_trusted == 0) {
-			LOG(INFO) << "no more peers to trust; trusting self (id " << m_id << ")";
-			next_trusted = m_id;
-		} else {
-			if (next_trusted > m_id) {
-				LOG(INFO) << "trusting self (id " << m_id << ")";
-				next_trusted = m_id;
-			} else {
-				LOG(INFO) << "trusting id " << next_trusted;
-			}
-		}
-		m_trusted_peer = next_trusted;
-		m_last_leader_active = now;
-	}
+	uint64_t now = uv_hrtime();
+	m_role->periodic(now);
 }
 
 void
 Node :: handle_message(const Message* msg) {
+	uint64_t now = uv_hrtime();
 	LOG(INFO) << "got message " << MSG_STR(msg->type) << " from index " << msg->source;
+	IdentityMessage ident_msg(m_id, m_listen_address);
 	switch (msg->type) {
 	case MSG_IDENT:
-		handle_ident(*msg);
+		ident_msg = static_cast<const IdentityMessage&>(*msg);
+		m_peer_registry->set_identity(ident_msg.source, ident_msg.id, ident_msg.address);
+		LOG(INFO) << ident_msg.source << " has ID " << ident_msg.id << " and address " <<
+			ident_msg.address;
 		break;
 	case MSG_IDENT_REQUEST:
-		handle_ident_request(*msg);
+		m_peer_registry->send(msg->source, &ident_msg);
 		break;
 	case MSG_LEADER_ACTIVE:
-		handle_leader_active(*msg);
+		m_role->handle_leader_active(now, static_cast<const LeaderActiveMessage&>(*msg));
 		break;
 	case MSG_LEADER_ACTIVE_ACK:
-		handle_leader_active_ack(*msg);
+		//handle_leader_active_ack(*msg);
 		break;
 	}
-}
-
-void
-Node :: handle_ident(const Message& msg) {
-	auto ident_msg = static_cast<const IdentityMessage&>(msg);
-	m_peer_registry->set_identity(ident_msg.source, ident_msg.id, ident_msg.address);
-	LOG(INFO) << ident_msg.source << " has ID " << ident_msg.id << " and address " <<
-		ident_msg.address;
-}
-
-void
-Node :: handle_ident_request(const Message& msg) {
-	IdentityMessage ident_msg(m_id, m_listen_address);
-	m_peer_registry->send(msg.source, &ident_msg);
-}
-
-void
-Node :: handle_leader_active(const Message& msg) {
-	auto leader_active_msg = static_cast<const LeaderActiveMessage&>(msg);
-	auto leader_id = leader_active_msg.id;
-	if (leader_id < m_trusted_peer) {
-		m_trusted_peer = leader_id;
-		LOG(INFO) << "trusting id " << leader_id;
-	}
-	if (leader_id == m_trusted_peer) {
-		m_last_leader_active = uv_hrtime();
-		// Acknowledge leadership.
-		DLOG(INFO) << "acking leadership";
-		LeaderActiveAck ack;
-		m_peer_registry->send(leader_active_msg.source, &ack);
-	}
-}
-
-void
-Node :: handle_leader_active_ack(const Message& msg) {
-	LOG(INFO) << "got ack of active leadership";
 }

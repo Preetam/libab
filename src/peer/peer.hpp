@@ -7,7 +7,6 @@
 #include <cpl/net/sockaddr.hpp>
 #include "message_queue/message_queue.hpp"
 #include "message/decode.hpp"
-#include "message/identity_message.hpp"
 
 const int READ_BUFFER_SIZE = 16*1024;
 

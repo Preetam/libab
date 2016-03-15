@@ -2,9 +2,6 @@
 #include <cstring>
 
 #include "message.hpp"
-#include "identity_message.hpp"
-#include "ping_pong_message.hpp"
-#include "leader_message.hpp"
 
 /**
  * A message header has 4 fields:

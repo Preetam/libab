@@ -11,9 +11,8 @@
 #include "role.hpp"
 #include "peer/peer.hpp"
 #include "peer_registry.hpp"
+#include "message/message.hpp"
 #include "message_queue/message_queue.hpp"
-#include "message/identity_message.hpp"
-#include "message/leader_message.hpp"
 
 const uint64_t leader_timeout_ns = 1e9;
 
@@ -27,7 +26,7 @@ public:
 	, m_mq(std::make_shared<Message_Queue>())
 	, m_trusted_peer(0)
 	, m_last_leader_active(uv_hrtime())
-	, m_role(std::make_unique<Role>(*m_peer_registry))
+	, m_role(std::make_unique<Role>(*m_peer_registry, id, cluster_size))
 	{
 		LOG(INFO) << "Node initialized with cluster size " << m_cluster_size;
 		LOG(INFO) << "leader last active " << m_last_leader_active;
@@ -71,16 +70,4 @@ private:
 
 	void
 	handle_message(const Message*);
-
-	void
-	handle_ident(const Message&);
-
-	void
-	handle_ident_request(const Message&);
-
-	void
-	handle_leader_active(const Message&);
-
-	void
-	handle_leader_active_ack(const Message&);
 }; // Node
