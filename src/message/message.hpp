@@ -294,7 +294,7 @@ public:
 	inline int
 	body_size() const
 	{
-		return 8;
+		return 16;
 	}
 
 	inline int
@@ -304,6 +304,7 @@ public:
 			return -1;
 		}
 		write64be(id, dest);
+		dest += 8;
 		write64be(seq, dest);
 		return 0;
 	}

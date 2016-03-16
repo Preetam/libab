@@ -21,7 +21,6 @@ public:
 	, m_valid(false)
 	, m_node_ident_msg(node_ident_msg)
 	{
-		LOG(INFO) << "Peer(1) = " << this << ", TCP = " << m_tcp.get();
 		init_loop_handles();
 		run();
 	}
@@ -35,7 +34,6 @@ public:
 	, m_address(addr.str())
 	, m_node_ident_msg(node_ident_msg)
 	{
-		LOG(INFO) << "Peer(2) = " << this << ", TCP = " << m_tcp.get();
 		init_loop_handles();
 
 		auto req = new uv_connect_t;
@@ -82,7 +80,6 @@ public:
 		if (m_tcp != nullptr) {
 			auto old_stream = m_tcp.release();
 			uv_close((uv_handle_t*)old_stream, [](uv_handle_t* handle) {
-				LOG(INFO) << "handle " << handle << " closed";
 				delete handle;
 			});
 		}
@@ -108,7 +105,6 @@ public:
 	send(const Message* msg)
 	{
 		if (!m_active || m_tcp == nullptr) {
-			LOG(WARNING) << "!!! skipping send to " << m_index << " MSG = " << MSG_STR(msg->type);
 			return;
 		}
 		int size = msg->packed_size();
@@ -130,7 +126,6 @@ public:
 	set_index(int index)
 	{
 		m_index = index;
-		LOG(INFO) << "Peer index " << index << " with handle " << m_tcp.get();
 	}
 
 	bool
@@ -146,7 +141,6 @@ public:
 		uv_close((uv_handle_t*)handle, [](uv_handle_t* handle) {
 			delete handle;
 		});
-		DLOG(INFO) << "~Peer() " << this;
 	}
 
 private:

@@ -29,7 +29,6 @@ public:
 	void
 	set_identity(const int index, const uint64_t id, const std::string& address)
 	{
-		LOG(INFO) << "set_identity(index=" << index << ", id=" << id << ")";
 		Peer* peer;
 		try {
 			auto peer_ptr = m_peers.at(index);
@@ -42,9 +41,7 @@ public:
 		// update the other one.
 		for (auto i = std::begin(m_peers); i != std::end(m_peers); ++i) {
 			auto p = i->second;
-			LOG(INFO) << "index " << i->first << " has ID " << p->id();
 			if (i->first < index && (p->id() == id || p->address() == address)) {
-				LOG(INFO) << "!!! duplicate peer " << id;
 				*p = std::move(*peer);
 				cleanup();
 				break;

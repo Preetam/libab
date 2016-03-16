@@ -16,7 +16,6 @@ Peer :: run() {
 			if (nread < 0) {
 				uv_close((uv_handle_t*)stream, [](uv_handle_t* handle) {
 					auto self = (Peer*)handle->data;
-					LOG(INFO) << "connection closed (handle " << handle << ")";
 					self->m_active = false;
 					if (self->m_valid) {
 						self->m_tcp = nullptr;
@@ -27,7 +26,6 @@ Peer :: run() {
 				});
 				return;
 			}
-			DLOG(INFO) << "got " << nread << " bytes of data from " << peer->m_index;
 			for (int i = 0; i < nread; i++) {
 				peer->m_read_buf.push_back(buf->base[i]);
 				peer->m_pending_msg_size++;
@@ -48,8 +46,6 @@ Peer :: run() {
 void
 Peer :: process_message_data(uint8_t* data, int size)
 {
-	//LOG(INFO) << "processing message data of size " << size;
-
 	std::unique_ptr<Message> m;
 	if (decode_message(m, data, size) >= 0) {
 		m->source = m_index;
@@ -83,7 +79,6 @@ Peer :: periodic()
 		}
 		auto now = uv_hrtime();
 		if (now - m_last_reconnect > 3e9) {
-			LOG(INFO) << "attempting to reconnect to peer with address " << m_address;
 			reconnect();
 			m_last_reconnect = now;
 		}
@@ -94,7 +89,6 @@ Peer :: periodic()
 void
 Peer :: reconnect()
 {
-	LOG(INFO) << "reconnecting to " << m_address;
 	if (m_tcp == nullptr) {
 		m_tcp = std::make_unique<uv_tcp_t>();
 		if (uv_tcp_init(m_loop, m_tcp.get()) < 0) {
@@ -113,7 +107,6 @@ Peer :: reconnect()
 	uv_tcp_connect(req, m_tcp.get(), reinterpret_cast<struct sockaddr*>(&sockaddr),
 		[](uv_connect_t* req, int status) {
 			if (status < 0) {
-				LOG(WARNING) << "reconnect failed";
 				auto self = (Peer*)req->data;
 				uv_close((uv_handle_t*)self->m_tcp.get(), [](uv_handle_t* handle) {
 					auto self = (Peer*)handle->data;

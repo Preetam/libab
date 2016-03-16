@@ -106,14 +106,11 @@ Node :: periodic() {
 void
 Node :: handle_message(const Message* msg) {
 	uint64_t now = uv_hrtime();
-	LOG(INFO) << "got message " << MSG_STR(msg->type) << " from index " << msg->source;
 	IdentityMessage ident_msg(m_id, m_listen_address);
 	switch (msg->type) {
 	case MSG_IDENT:
 		ident_msg = static_cast<const IdentityMessage&>(*msg);
 		m_peer_registry->set_identity(ident_msg.source, ident_msg.id, ident_msg.address);
-		LOG(INFO) << ident_msg.source << " has ID " << ident_msg.id << " and address " <<
-			ident_msg.address;
 		break;
 	case MSG_IDENT_REQUEST:
 		m_peer_registry->send(msg->source, &ident_msg);
@@ -122,7 +119,7 @@ Node :: handle_message(const Message* msg) {
 		m_role->handle_leader_active(now, static_cast<const LeaderActiveMessage&>(*msg));
 		break;
 	case MSG_LEADER_ACTIVE_ACK:
-		//handle_leader_active_ack(*msg);
+		m_role->handle_leader_active_ack(now, static_cast<const LeaderActiveAck&>(*msg));
 		break;
 	}
 }

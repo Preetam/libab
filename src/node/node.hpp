@@ -29,7 +29,6 @@ public:
 	, m_role(std::make_unique<Role>(*m_peer_registry, id, cluster_size))
 	{
 		LOG(INFO) << "Node initialized with cluster size " << m_cluster_size;
-		LOG(INFO) << "leader last active " << m_last_leader_active;
 	}
 
 	// start starts a node listening at address.
