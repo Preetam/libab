@@ -1,0 +1,12 @@
+dependencies:
+  pre:
+    - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+    - sudo add-apt-repository ppa:george-edison55/precise-backports -y
+    - sudo apt-get update
+    - sudo apt-get install g++-5 cmake -y
+    - git submodule update --init --recursive
+test:
+  override:
+    - mkdir -p build
+    - cd build && cmake -DCMAKE_C_COMPILER=/usr/bin/gcc-5 -DCMAKE_CXX_COMPILER=/usr/bin/g++-5 ..
+    - cd build && make -j
