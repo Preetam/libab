@@ -3,9 +3,9 @@
 #include <glog/logging.h>
 #include <uv.h>
 #include <cstdint>
+#include <functional>
 
 #include <cpl/net/sockaddr.hpp>
-#include "message_queue/message_queue.hpp"
 #include "message/decode.hpp"
 
 const int READ_BUFFER_SIZE = 16*1024;
@@ -13,11 +13,12 @@ const int READ_BUFFER_SIZE = 16*1024;
 class Peer
 {
 public:
-	Peer(std::unique_ptr<uv_tcp_t> conn, std::shared_ptr<Message_Queue> mq,
+	Peer(std::function<void(const Message*)> send_to_node,
+		 std::unique_ptr<uv_tcp_t> conn,
 		 IdentityMessage node_ident_msg)
-	: m_active(true)
+	: m_send_to_node(send_to_node)
+	, m_active(true)
 	, m_tcp(std::move(conn))
-	, m_mq(mq)
 	, m_valid(false)
 	, m_node_ident_msg(node_ident_msg)
 	{
@@ -25,11 +26,12 @@ public:
 		run();
 	}
 
-	Peer(cpl::net::SockAddr& addr, std::unique_ptr<uv_tcp_t> conn,
-		 std::shared_ptr<Message_Queue> mq, IdentityMessage node_ident_msg)
-	: m_active(false)
+	Peer(std::function<void(const Message*)> send_to_node,
+		 cpl::net::SockAddr& addr, std::unique_ptr<uv_tcp_t> conn,
+		 IdentityMessage node_ident_msg)
+	: m_send_to_node(send_to_node)
+	, m_active(false)
 	, m_tcp(std::move(conn))
-	, m_mq(mq)
 	, m_valid(true)
 	, m_address(addr.str())
 	, m_node_ident_msg(node_ident_msg)
@@ -88,6 +90,8 @@ public:
 		m_address = rhs.m_address;
 		m_valid = true;
 		m_active = true;
+		m_read_buf = std::move(rhs.m_read_buf);
+		m_pending_msg_size = rhs.m_pending_msg_size;
 		rhs.m_valid = false;
 		rhs.m_active = false;
 		return *this;
@@ -160,19 +164,19 @@ private:
 	process_message_data(uint8_t* data, int size);
 
 private:
-	bool                           m_active;
-	bool                           m_valid;
-	std::unique_ptr<uv_tcp_t>      m_tcp;
-	std::unique_ptr<uv_timer_t>    m_timer;
-	uv_loop_t*                     m_loop;
-	std::shared_ptr<Message_Queue> m_mq;
-	int                            m_index;
-	uint64_t                       m_id;
-	std::string                    m_address;
-	uint64_t                       m_last_reconnect;
-	IdentityMessage                m_node_ident_msg;
+	std::function<void(const Message*)> m_send_to_node;
+	bool                                m_active;
+	bool                                m_valid;
+	std::unique_ptr<uv_tcp_t>           m_tcp;
+	std::unique_ptr<uv_timer_t>         m_timer;
+	uv_loop_t*                          m_loop;
+	int                                 m_index;
+	uint64_t                            m_id;
+	std::string                         m_address;
+	uint64_t                            m_last_reconnect;
+	IdentityMessage                     m_node_ident_msg;
 
-	char                           m_alloc_buf[READ_BUFFER_SIZE];
-	std::vector<uint8_t>           m_read_buf;
-	int                            m_pending_msg_size;
+	char                                m_alloc_buf[READ_BUFFER_SIZE];
+	std::vector<uint8_t>                m_read_buf;
+	int                                 m_pending_msg_size;
 }; // Peer

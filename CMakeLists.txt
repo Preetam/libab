@@ -13,7 +13,6 @@ add_subdirectory(dep/libuv)
 
 add_executable(sacq
 	src/message/message.cc
-	src/message_queue/message_queue.cc
 	src/peer/peer.cc
 	src/node/node.cc
 	src/main.cc

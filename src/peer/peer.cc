@@ -35,9 +35,19 @@ Peer :: run() {
 			if (msg_length > 0 && peer->m_pending_msg_size >= msg_length) {
 				peer->process_message_data(peer->m_read_buf.data(), msg_length);
 				// Trim the buffer.
-				peer->m_read_buf.erase(peer->m_read_buf.begin(),
-					peer->m_read_buf.begin()+msg_length);
-				peer->m_pending_msg_size -= msg_length;
+				std::vector<uint8_t> replacement;
+				for (auto& i : peer->m_read_buf) {
+					if (msg_length > 0) {
+						msg_length--;
+						continue;
+					}
+					replacement.push_back(i);
+				}
+				//peer->m_read_buf.erase(peer->m_read_buf.begin(),
+				//	peer->m_read_buf.begin()+msg_length);
+				peer->m_read_buf = std::move(replacement);
+				//peer->m_pending_msg_size -= msg_length;
+				peer->m_pending_msg_size = peer->m_read_buf.size();
 			}
 		}
 	);
@@ -49,7 +59,9 @@ Peer :: process_message_data(uint8_t* data, int size)
 	std::unique_ptr<Message> m;
 	if (decode_message(m, data, size) >= 0) {
 		m->source = m_index;
-		m_mq->push(std::move(m));
+		if (m_send_to_node != nullptr) {
+			m_send_to_node(m.get());
+		}
 	}
 }
 
@@ -64,7 +76,7 @@ Peer :: init_loop_handles()
 	uv_timer_start(m_timer.get(), [](uv_timer_t* timer) {
 		auto self = (Peer*)timer->data;
 		self->periodic();
-	}, 1000, 1000);
+	}, 16, 16);
 }
 
 void

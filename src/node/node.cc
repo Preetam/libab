@@ -50,7 +50,9 @@ Node :: connect_to_peer(cpl::net::SockAddr& addr) {
 	}
 
 	IdentityMessage ident_msg(m_id, m_listen_address);
-	auto peer = std::make_shared<Peer>(addr, std::move(handle), m_mq, ident_msg);
+	auto peer = std::make_shared<Peer>([=](const Message* m) {
+		handle_message(m);
+	}, addr, std::move(handle), ident_msg);
 	m_peer_registry->register_peer(++m_index_counter, peer);
 	peer->send(&ident_msg);
 	return;
@@ -65,7 +67,7 @@ Node :: run() {
 		auto self = (Node*)timer->data;
 		self->periodic();
 	},
-	1000, 1000);
+	16, 16);
 	if (uv_run(m_uv_loop.get(), UV_RUN_DEFAULT) < 0) {
 		LOG(ERROR) << "failed to run event loop";
 		return;
@@ -83,7 +85,9 @@ Node ::	on_connect(uv_stream_t* server, int status) {
 	uv_tcp_init(server->loop, client.get());
 	uv_accept(server, (uv_stream_t*)client.get());
 	IdentityMessage ident_msg(self->m_id, self->m_listen_address);
-	auto peer = std::make_shared<Peer>(std::move(client), self->m_mq, ident_msg);
+	auto peer = std::make_shared<Peer>([=](const Message* m) {
+		self->handle_message(m);
+	}, std::move(client), ident_msg);
 	self->m_peer_registry->register_peer(++self->m_index_counter, peer);
 	peer->send(&ident_msg);
 }
@@ -92,13 +96,6 @@ void
 Node :: periodic() {
 	// Clean up the registry
 	m_peer_registry->cleanup();
-
-	// Process messages
-	while (m_mq->size() > 0) {
-		auto msg = m_mq->pop();
-		handle_message(msg.get());
-	}
-
 	uint64_t now = uv_hrtime();
 	m_role->periodic(now);
 }

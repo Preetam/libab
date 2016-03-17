@@ -37,13 +37,13 @@ public:
 				// Leader hasn't been active for over 1 sec
 				DLOG(INFO) << "Leader has timed out. Moving up to PotentialLeader state.";
 				m_state = PotentialLeader;
-				m_pending_votes = m_cluster_size-1;
+				m_pending_votes = m_cluster_size/2;
 			}
 		}
 
 		if (m_state == PotentialLeader) {
-			if (m_pending_votes >= m_cluster_size/2+1) {
-				m_pending_votes = m_cluster_size-1;
+			if (m_pending_votes > 0) {
+				m_pending_votes = m_cluster_size/2;
 				m_current_leader = 0;
 			} else {
 				m_state = Leader;
@@ -52,8 +52,8 @@ public:
 		}
 
 		if (m_state == Leader) {
-			if (m_pending_votes >= m_cluster_size/2+1) {
-				m_pending_votes = m_cluster_size-1;
+			if (m_pending_votes > 0) {
+				m_pending_votes = m_cluster_size/2;
 				m_state = PotentialLeader;
 				DLOG(INFO) << "Can't confirm leadership. Dropping down to PotentialLeader state.";
 				m_current_leader = 0;
@@ -63,15 +63,7 @@ public:
 		if (m_state != Follower) {
 			LeaderActiveMessage msg(m_id, m_seq);
 			m_registry.broadcast(&msg);
-			m_pending_votes = m_cluster_size-1;
-		}
-
-		if (m_state == Leader && (ts/1000000000)%3 == 0) {
-			m_seq++;
-		}
-
-		if (m_state != Leader && (ts/1000000000)%3 == 0 && m_current_leader != 0) {
-			LOG(INFO) << "Current leader is " << m_current_leader;
+			m_pending_votes = m_cluster_size/2;
 		}
 	}
 
