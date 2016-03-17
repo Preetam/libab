@@ -71,12 +71,6 @@ decode_message(std::unique_ptr<Message>& m, uint8_t* src, int src_len) {
 	assert(src_len >= 5);
 	// Peek at the message type
 	switch (src[4]) {
-	case MSG_PING:
-		m = std::make_unique<PingMessage>();
-		break;
-	case MSG_PONG:
-		m = std::make_unique<PongMessage>();
-		break;
 	case MSG_IDENT_REQUEST:
 		m = std::make_unique<IdentityRequest>();
 		break;
@@ -87,7 +81,7 @@ decode_message(std::unique_ptr<Message>& m, uint8_t* src, int src_len) {
 		m = std::make_unique<LeaderActiveMessage>();
 		break;
 	case MSG_LEADER_ACTIVE_ACK:
-		m = std::make_unique<LeaderActiveMessage>();
+		m = std::make_unique<LeaderActiveAck>();
 		break;
 	default:
 		return -1;

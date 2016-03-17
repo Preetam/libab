@@ -30,24 +30,28 @@ Peer :: run() {
 				peer->m_read_buf.push_back(buf->base[i]);
 				peer->m_pending_msg_size++;
 			}
-			auto msg_length = decode_message_length(peer->m_read_buf.data(),
-				peer->m_read_buf.size());
-			if (msg_length > 0 && peer->m_pending_msg_size >= msg_length) {
-				peer->process_message_data(peer->m_read_buf.data(), msg_length);
-				// Trim the buffer.
-				std::vector<uint8_t> replacement;
-				for (auto& i : peer->m_read_buf) {
-					if (msg_length > 0) {
-						msg_length--;
-						continue;
+			while (true) {
+				auto msg_length = decode_message_length(peer->m_read_buf.data(),
+					peer->m_read_buf.size());
+				if (msg_length > 0 && peer->m_pending_msg_size >= msg_length) {
+					peer->process_message_data(peer->m_read_buf.data(), msg_length);
+					// Trim the buffer.
+					std::vector<uint8_t> replacement;
+					for (auto& i : peer->m_read_buf) {
+						if (msg_length > 0) {
+							msg_length--;
+							continue;
+						}
+						replacement.push_back(i);
 					}
-					replacement.push_back(i);
+					//peer->m_read_buf.erase(peer->m_read_buf.begin(),
+					//	peer->m_read_buf.begin()+msg_length);
+					peer->m_read_buf = std::move(replacement);
+					//peer->m_pending_msg_size -= msg_length;
+					peer->m_pending_msg_size = peer->m_read_buf.size();
+				} else {
+					break;
 				}
-				//peer->m_read_buf.erase(peer->m_read_buf.begin(),
-				//	peer->m_read_buf.begin()+msg_length);
-				peer->m_read_buf = std::move(replacement);
-				//peer->m_pending_msg_size -= msg_length;
-				peer->m_pending_msg_size = peer->m_read_buf.size();
 			}
 		}
 	);

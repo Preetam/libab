@@ -15,6 +15,7 @@ add_executable(sacq
 	src/message/message.cc
 	src/peer/peer.cc
 	src/node/node.cc
+	src/node/role.cc
 	src/main.cc
 )
 

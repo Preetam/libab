@@ -13,10 +13,6 @@ enum MESSAGE_TYPE : uint8_t
 {
 	// Invalid
 	MSG_INVALID,
-	// Ping
-	MSG_PING,
-	// Ping response (pong)
-	MSG_PONG,
 	// Identification request
 	MSG_IDENT_REQUEST,
 	// Identification
@@ -30,8 +26,6 @@ enum MESSAGE_TYPE : uint8_t
 inline
 const char* MSG_STR(uint8_t type) {
 	switch (type) {
-	case MSG_PING: return "MSG_PING";
-	case MSG_PONG: return "MSG_PONG";
 	case MSG_IDENT_REQUEST: return "MSG_IDENT_REQUEST";
 	case MSG_IDENT: return "MSG_IDENT";
 	case MSG_LEADER_ACTIVE: return "MSG_LEADER_ACTIVE";
@@ -219,74 +213,21 @@ public:
 	std::string address;
 };
 
-class PingMessage : public Message
-{
-public:
-	PingMessage()
-	: Message(MSG_PING)
-	{
-	}
-
-	inline int
-	body_size()
-	{
-		return 0;
-	}
-
-	inline int
-	pack_body(uint8_t* dest, int dest_len) const
-	{
-		return 0;
-	}
-
-	inline int
-	unpack_body(uint8_t* src, int src_len)
-	{
-		return 0;
-	}
-};
-
-class PongMessage : public Message
-{
-public:
-	PongMessage()
-	: Message(MSG_PONG)
-	{
-	}
-
-	inline int
-	body_size()
-	{
-		return 0;
-	}
-
-	inline int
-	pack_body(uint8_t* dest, int dest_len) const
-	{
-		return 0;
-	}
-
-	inline int
-	unpack_body(uint8_t* src, int src_len)
-	{
-		return 0;
-	}
-};
-
-
 class LeaderActiveMessage : public Message
 {
 public:
 	LeaderActiveMessage()
 	: Message(MSG_LEADER_ACTIVE)
 	, id(0)
+	, round(0)
 	, seq(0)
 	{
 	}
 
-	LeaderActiveMessage(uint64_t id, uint64_t seq)
+	LeaderActiveMessage(uint64_t id, uint64_t round, uint64_t seq)
 	: Message(MSG_LEADER_ACTIVE)
 	, id(id)
+	, round(round)
 	, seq(seq)
 	{
 	}
@@ -294,16 +235,18 @@ public:
 	inline int
 	body_size() const
 	{
-		return 16;
+		return 24;
 	}
 
 	inline int
 	pack_body(uint8_t* dest, int dest_len) const
 	{
-		if (dest_len < 8+8) {
+		if (dest_len < 24) {
 			return -1;
 		}
 		write64be(id, dest);
+		dest += 8;
+		write64be(round, dest);
 		dest += 8;
 		write64be(seq, dest);
 		return 0;
@@ -312,10 +255,12 @@ public:
 	inline int
 	unpack_body(uint8_t* src, int src_len)
 	{
-		if (src_len < 8+8) {
+		if (src_len < 24) {
 			return -1;
 		}
 		id = read64be(src);
+		src += 8;
+		round = read64be(src);
 		src += 8;
 		seq = read64be(src);
 		return 0;
@@ -323,6 +268,7 @@ public:
 
 public:
 	uint64_t id;
+	uint64_t round;
 	uint64_t seq;
 };
 
@@ -331,25 +277,43 @@ class LeaderActiveAck : public Message
 public:
 	LeaderActiveAck()
 	: Message(MSG_LEADER_ACTIVE_ACK)
+	, seq(0)
+	{
+	}
+
+	LeaderActiveAck(uint64_t seq)
+	: Message(MSG_LEADER_ACTIVE_ACK)
+	, seq(seq)
 	{
 	}
 
 	inline int
 	body_size() const
 	{
-		return 0;
+		return 8;
 	}
 
 	inline int
 	pack_body(uint8_t* dest, int dest_len) const
 	{
+		if (dest_len < 8) {
+			return -1;
+		}
+		write64be(seq, dest);
 		return 0;
 	}
 
 	inline int
 	unpack_body(uint8_t* src, int src_len)
 	{
+		if (src_len < 8) {
+			return -1;
+		}
+		seq = read64be(src);
 		return 0;
 	}
+
+public:
+	uint64_t seq;
 };
 
