@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <functional>
 #include <glog/logging.h>
 
 #include "message/message.hpp"
@@ -15,8 +16,18 @@ enum State
 
 struct LeaderData
 {
+	LeaderData()
+	: m_pending_votes(0)
+	, m_last_broadcast(0)
+	, m_pending_round(0)
+	{
+	}
+
 	uint64_t m_pending_votes;
 	uint64_t m_last_broadcast;
+	uint64_t m_pending_round;
+	std::function<void(int, void*)> m_callback;
+	void* m_callback_data;
 }; // LeaderData
 
 struct PotentialLeaderData
@@ -51,6 +62,43 @@ public:
 	handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg);
 
 	void
+	handle_append(uint64_t ts, const AppendMessage& msg)
+	{
+		if (msg.round == m_round+1) {
+			AppendAck ack(msg.round);
+			++m_round;
+			m_registry.send(msg.source, &ack);
+		}
+	}
+
+	void
+	handle_append_ack(uint64_t ts, const AppendAck& msg)
+	{
+		if (m_state != Leader) {
+			return;
+		}
+
+		if (m_leader_data->m_callback == nullptr) {
+			return;
+		}
+
+		if (msg.round == m_leader_data->m_pending_round) {
+			if (m_leader_data->m_pending_votes > 0) {
+				m_leader_data->m_pending_votes--;
+			}
+		}
+
+		if (m_leader_data->m_pending_votes == 0) {
+			// We got all of the votes already.
+			m_round++;
+			m_leader_data->m_pending_round = 0;
+			m_leader_data->m_callback(0, m_leader_data->m_callback_data);
+			m_leader_data->m_callback = nullptr;
+			m_leader_data->m_callback_data = nullptr;
+		}
+	}
+
+	void
 	handle_leader_active_ack(uint64_t ts, const LeaderActiveAck& msg)
 	{
 		if (m_seq > msg.seq) {
@@ -72,6 +120,20 @@ public:
 			// Nothing to do.
 			break;
 		}
+	}
+
+	void
+	send_append(std::string append_content, std::function<void(int, void*)> cb, void* data)
+	{
+		if (m_state != Leader) {
+			cb(-1, data);
+			return;
+		}
+		m_leader_data->m_pending_round = m_round+1;
+		m_leader_data->m_callback = cb;
+		m_leader_data->m_callback_data = data;
+		AppendMessage msg(m_leader_data->m_pending_round, append_content);
+		m_registry.broadcast(&msg);
 	}
 
 private:

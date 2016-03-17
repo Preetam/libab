@@ -20,7 +20,9 @@ enum MESSAGE_TYPE : uint8_t
 	// Active leader
 	MSG_LEADER_ACTIVE,
 	// Active leader acknowledgement
-	MSG_LEADER_ACTIVE_ACK
+	MSG_LEADER_ACTIVE_ACK,
+	MSG_APPEND,
+	MSG_APPEND_ACK
 };
 
 inline
@@ -317,3 +319,101 @@ public:
 	uint64_t seq;
 };
 
+class AppendMessage : public Message
+{
+public:
+	AppendMessage()
+	: Message(MSG_APPEND), round(0), append_content("")
+	{
+	}
+
+	AppendMessage(uint64_t round, std::string append_content)
+	: Message(MSG_APPEND), round(round), append_content(append_content)
+	{
+	}
+
+	inline int
+	body_size() const
+	{
+		return 8 + 2 + append_content.size();
+	}
+
+	inline int
+	pack_body(uint8_t* dest, int dest_len) const {
+		if (dest_len < 8 + 2 + append_content.size()) {
+			return -1;
+		}
+		write64be(round, dest);
+		dest += 8;
+		write16be(append_content.size(), dest);
+		dest += 2;
+		memcpy(dest, append_content.c_str(), append_content.size());
+		return 0;
+	}
+
+	inline int
+	unpack_body(uint8_t* src, int src_len)
+	{
+		if (src_len < 8 + 2) {
+			return -1;
+		}
+		round = read64be(src);
+		src += 8;
+		uint16_t append_content_size = read16be(src);
+		src += 2;
+		if (src_len < 8 + 2 + append_content_size) {
+			return -2;
+		}
+	 append_content = std::string((const char*)src, append_content_size);
+		return 0;
+	}
+
+public:
+	uint64_t round;
+	std::string append_content;
+};
+
+class AppendAck : public Message
+{
+public:
+	AppendAck()
+	: Message(MSG_APPEND_ACK)
+	, round(0)
+	{
+	}
+
+	AppendAck(uint8_t round)
+	: Message(MSG_APPEND_ACK)
+	, round(round)
+	{
+	}
+
+	inline int
+	body_size() const
+	{
+		return 1;
+	}
+
+	inline int
+	pack_body(uint8_t* dest, int dest_len) const
+	{
+		if (dest_len < 1) {
+			return -1;
+		}
+		write8be(round, dest);
+		return 0;
+	}
+
+	inline int
+	unpack_body(uint8_t* src, int src_len)
+	{
+		if (src_len < 1) {
+			return -1;
+		}
+		round = read8be(src);
+		return 0;
+	}
+
+public:
+	uint8_t round;
+};

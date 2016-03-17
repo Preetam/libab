@@ -3,11 +3,13 @@
 #include <thread>
 #include <memory>
 #include <cerrno>
+#include <future>
 
 #include <uv.h>
 #include <glog/logging.h>
 #include <cpl/net/sockaddr.hpp>
 
+#include "sacq.h"
 #include "role.hpp"
 #include "peer/peer.hpp"
 #include "peer_registry.hpp"
@@ -44,6 +46,28 @@ public:
 	// peer is registered as a failed node.
 	void
 	connect_to_peer(cpl::net::SockAddr&);
+
+	void
+	append(std::string content, ab_append_cb cb, void* data)
+	{
+		auto async = new uv_async_t;
+		auto task = new std::packaged_task<void()>([=]() {
+			m_role->send_append(content, cb, data);
+			uv_close((uv_handle_t*)async, [](uv_handle_t* handle) {
+				// delete packaged_task
+				auto func = reinterpret_cast<std::packaged_task<void()>*>(handle->data);
+				delete func;
+				// delete async
+				delete handle;
+			});
+		});
+		async->data = task;
+		uv_async_init(m_uv_loop.get(), async, [](uv_async_t* handle) {
+			auto func = reinterpret_cast<std::packaged_task<void()>*>(handle->data);
+			(*func)();
+		});
+		uv_async_send(async);
+	}
 
 private:
 	uint64_t                      m_id;

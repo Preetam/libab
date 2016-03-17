@@ -21,6 +21,9 @@ Role :: periodic_leader(uint64_t ts) {
 		// It's been over 300 ms since the last broadcast.
 		if (m_leader_data->m_pending_votes > 0) {
 			// Didn't get a majority of the votes.
+			if (m_leader_data->m_callback != nullptr) {
+				m_leader_data->m_callback(-1, m_leader_data->m_callback_data);
+			}
 			DLOG(INFO) << "Can't confirm leadership. Dropping down to PotentialLeader state.";
 			DLOG(INFO) << "Missing " << m_leader_data->m_pending_votes << " votes";
 			m_state = PotentialLeader;
@@ -33,6 +36,12 @@ Role :: periodic_leader(uint64_t ts) {
 
 	if (m_leader_data->m_pending_votes == 0) {
 		// We got all of the votes already.
+		if (m_leader_data->m_callback != nullptr) {
+			// Pending callback. Call it.
+			m_leader_data->m_callback(0, m_leader_data->m_callback_data);
+			m_leader_data->m_callback = nullptr;
+			m_leader_data->m_callback_data = nullptr;
+		}
 		if (ts - m_leader_data->m_last_broadcast > 100e6) {
 			// It's been over 100 ms since the last broadcast.
 			// Broadcast another heartbeat.
