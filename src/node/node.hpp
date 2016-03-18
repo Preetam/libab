@@ -20,7 +20,7 @@ const uint64_t leader_timeout_ns = 1e9;
 class Node
 {
 public:
-	Node(uint64_t id, int cluster_size)
+	Node(uint64_t id, int cluster_size, ab_callbacks_t callbacks, void* callbacks_data)
 	: m_id(id)
 	, m_cluster_size(cluster_size)
 	, m_peer_registry(std::make_unique<PeerRegistry>())
@@ -29,6 +29,7 @@ public:
 	, m_role(std::make_unique<Role>(*m_peer_registry, id, cluster_size))
 	{
 		LOG(INFO) << "Node initialized with cluster size " << m_cluster_size;
+		m_role->set_callbacks(callbacks, callbacks_data);
 	}
 
 	// start starts a node listening at address.
@@ -77,6 +78,8 @@ private:
 	std::unique_ptr<PeerRegistry> m_peer_registry;
 	int                           m_index_counter;
 	int                           m_cluster_size;
+	ab_callbacks_t*               m_client_callbacks;
+	void*                         m_client_callbacks_data;
 
 	uint64_t                      m_trusted_peer;
 	uint64_t                      m_last_leader_active;

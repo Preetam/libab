@@ -4,6 +4,7 @@
 #include <functional>
 #include <glog/logging.h>
 
+#include "sacq.h"
 #include "message/message.hpp"
 #include "peer_registry.hpp"
 
@@ -68,6 +69,10 @@ public:
 			AppendAck ack(msg.round);
 			++m_round;
 			m_registry.send(msg.source, &ack);
+			if (m_client_callbacks.on_append != nullptr) {
+				m_client_callbacks.on_append(msg.append_content.c_str(),
+					msg.append_content.size(), m_client_callbacks_data);
+			}
 		}
 	}
 
@@ -136,6 +141,13 @@ public:
 		m_registry.broadcast(&msg);
 	}
 
+	void
+	set_callbacks(ab_callbacks_t callbacks, void* callbacks_data)
+	{
+		m_client_callbacks = callbacks;
+		m_client_callbacks_data = callbacks_data;
+	}
+
 private:
 	void
 	periodic_leader(uint64_t ts);
@@ -158,4 +170,7 @@ private:
 	std::unique_ptr<LeaderData>          m_leader_data;
 	std::unique_ptr<PotentialLeaderData> m_potential_leader_data;
 	std::unique_ptr<FollowerData>        m_follower_data;
+
+	ab_callbacks_t  m_client_callbacks;
+	void*           m_client_callbacks_data;
 }; // Role

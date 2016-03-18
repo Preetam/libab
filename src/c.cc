@@ -6,9 +6,9 @@
 struct ab_node_t { Node* rep; };
 
 ab_node_t*
-ab_node_create(uint64_t id, int cluster_size) {
+ab_node_create(uint64_t id, int cluster_size, ab_callbacks_t callbacks, void* data) {
 	auto node = new ab_node_t;
-	node->rep = new Node(id, cluster_size);
+	node->rep = new Node(id, cluster_size, callbacks, data);
 	return node;
 }
 
@@ -35,9 +35,9 @@ ab_run(ab_node_t* node) {
 }
 
 int
-ab_append(ab_node_t* node, const uint8_t* content, int content_len,
+ab_append(ab_node_t* node, const char* content, int content_len,
 	ab_append_cb cb, void* data) {
-	node->rep->append(std::string((const char*)content, content_len), cb, data);
+	node->rep->append(std::string(content, content_len), cb, data);
 	return 0;
 }
 

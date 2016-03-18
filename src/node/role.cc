@@ -74,6 +74,9 @@ Role :: periodic_potential_leader(uint64_t ts) {
 		// We got all of the votes.
 		LOG(INFO) << "Received majority vote. Assuming leadership.";
 		m_state = Leader;
+		if (m_client_callbacks.when_leader != nullptr) {
+			m_client_callbacks.when_leader(m_client_callbacks_data);
+		}
 		m_potential_leader_data = nullptr;
 		m_leader_data = std::make_unique<LeaderData>();
 
@@ -119,6 +122,9 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 		if (m_follower_data->m_current_leader > 0 &&
 			msg.id != m_follower_data->m_current_leader) {
 			DLOG(INFO) << "Acking leadership from " << msg.id;
+			if (m_client_callbacks.on_leader_change != nullptr) {
+				m_client_callbacks.on_leader_change(msg.id, m_client_callbacks_data);
+			}
 		}
 		m_follower_data->m_last_leader_active = ts;
 		m_follower_data->m_current_leader = msg.id;
@@ -138,6 +144,13 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 		m_potential_leader_data = nullptr;
 		m_follower_data = std::make_unique<FollowerData>();
 		m_state = Follower;
+		if (m_client_callbacks.when_follower != nullptr) {
+			m_client_callbacks.when_follower(m_client_callbacks_data);
+		}
+		if (m_client_callbacks.on_leader_change != nullptr) {
+			m_client_callbacks.on_leader_change(msg.id, m_client_callbacks_data);
+		}
+		m_follower_data->m_current_leader = msg.id;
 		m_follower_data->m_last_leader_active = ts;
 		m_round = msg.round;
 		DLOG(INFO) << "Acking leadership from " << msg.id;
