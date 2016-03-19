@@ -7,9 +7,10 @@ extern "C" {
 #endif
 
 typedef struct {
-	void (*on_append)(const char* data, int data_len, void* cb_data);
-	void (*when_leader)(void* cb_data);
-	void (*when_follower)(void* cb_data);
+	void (*on_append)(uint64_t round, const char* data, int data_len, void* cb_data);
+	void (*on_commit)(uint64_t round, void* cb_data);
+	void (*gained_leadership)(void* cb_data);
+	void (*lost_leadership)(void* cb_data);
 	void (*on_leader_change)(uint64_t leader_id, void* cb_data);
 } ab_callbacks_t;
 
@@ -31,6 +32,9 @@ ab_run(ab_node_t* node);
 
 int
 ab_append(ab_node_t* node, const char* content, int content_len, ab_append_cb cb, void* data);
+
+void
+ab_confirm_append(ab_node_t* node, uint64_t round);
 
 int
 ab_destroy(ab_node_t* node);

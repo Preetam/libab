@@ -285,40 +285,46 @@ public:
 	{
 	}
 
-	LeaderActiveAck(uint64_t seq)
+	LeaderActiveAck(uint64_t seq, uint64_t uncommitted_round)
 	: Message(MSG_LEADER_ACTIVE_ACK)
 	, seq(seq)
+	, uncommitted_round(uncommitted_round)
 	{
 	}
 
 	inline int
 	body_size() const
 	{
-		return 8;
+		return 16;
 	}
 
 	inline int
 	pack_body(uint8_t* dest, int dest_len) const
 	{
-		if (dest_len < 8) {
+		if (dest_len < 16) {
 			return -1;
 		}
 		write64be(seq, dest);
+		dest += 8;
+		write64be(uncommitted_round, dest);
 		return 0;
 	}
 
 	inline int
 	unpack_body(uint8_t* src, int src_len)
 	{
-		if (src_len < 8) {
+		if (src_len < 16) {
 			return -1;
 		}
 		seq = read64be(src);
+		src += 8;
+		uncommitted_round = read64be(src);
 		return 0;
 	}
 
 public:
 	uint64_t seq;
+	uint64_t uncommitted_round;
 };
 
 class AppendMessage : public Message

@@ -41,6 +41,11 @@ ab_append(ab_node_t* node, const char* content, int content_len,
 	return 0;
 }
 
+void
+ab_confirm_append(ab_node_t* node, uint64_t round) {
+	node->rep->confirm_append(round);
+}
+
 int
 ab_destroy(ab_node_t* node) {
 	delete node->rep;

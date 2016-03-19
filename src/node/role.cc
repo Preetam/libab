@@ -22,11 +22,15 @@ Role :: periodic_leader(uint64_t ts) {
 		if (m_leader_data->m_pending_votes > 0) {
 			// Didn't get a majority of the votes.
 			if (m_leader_data->m_callback != nullptr) {
+				// Append was not confirmed by a majority.
 				m_leader_data->m_callback(-1, m_leader_data->m_callback_data);
 			}
 			DLOG(INFO) << "Can't confirm leadership. Dropping down to PotentialLeader state.";
 			DLOG(INFO) << "Missing " << m_leader_data->m_pending_votes << " votes";
 			m_state = PotentialLeader;
+			if (m_client_callbacks.lost_leadership != nullptr) {
+				m_client_callbacks.lost_leadership(m_client_callbacks_data);
+			}
 			m_leader_data = nullptr;
 			m_potential_leader_data = std::make_unique<PotentialLeaderData>();
 			m_potential_leader_data->m_pending_votes = m_cluster_size/2;
@@ -61,6 +65,7 @@ Role :: periodic_potential_leader(uint64_t ts) {
 		if (m_potential_leader_data->m_pending_votes > 0) {
 			// Didn't get a majority of the votes.
 			m_potential_leader_data->m_pending_votes = m_cluster_size/2;
+			m_potential_leader_data->m_ready_to_commit = 0;
 			++m_seq;
 			LeaderActiveMessage msg(m_id, m_round, m_seq);
 			m_registry.broadcast(&msg);
@@ -73,13 +78,20 @@ Role :: periodic_potential_leader(uint64_t ts) {
 	if (m_potential_leader_data->m_pending_votes == 0) {
 		// We got all of the votes.
 		LOG(INFO) << "Received majority vote. Assuming leadership.";
+		if (m_pending_commit == m_round+1) {
+			m_potential_leader_data->m_ready_to_commit++;
+		}
+		if (m_potential_leader_data->m_ready_to_commit == m_cluster_size/2) {
+			// A majority are ready to commit the next round,
+			// so we'll do it.
+			m_round++;
+		}
 		m_state = Leader;
-		if (m_client_callbacks.when_leader != nullptr) {
-			m_client_callbacks.when_leader(m_client_callbacks_data);
+		if (m_client_callbacks.gained_leadership != nullptr) {
+			m_client_callbacks.gained_leadership(m_client_callbacks_data);
 		}
 		m_potential_leader_data = nullptr;
 		m_leader_data = std::make_unique<LeaderData>();
-
 		++m_seq;
 		LeaderActiveMessage msg(m_id, m_round, m_seq);
 		m_registry.broadcast(&msg);
@@ -105,6 +117,11 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 	if (m_state == Follower) {
 		if (m_follower_data->m_current_leader != 0) {
 			// We have a leader already.
+			if (m_follower_data->m_current_leader != msg.id &&
+				ts - m_follower_data->m_last_leader_active <= 1000e6) {
+				// Leader hasn't timed out yet.
+				return;
+			}
 			if (m_round > msg.round) {
 				// The other node is behind.
 				return;
@@ -129,8 +146,14 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 		m_follower_data->m_last_leader_active = ts;
 		m_follower_data->m_current_leader = msg.id;
 		m_round = msg.round;
+		if (m_round > 0 && m_round == m_pending_commit) {
+			if (m_client_callbacks.on_commit != nullptr) {
+				m_client_callbacks.on_commit(m_round, m_client_callbacks_data);
+			}
+			m_pending_commit = 0;
+		}
 		m_seq = msg.seq;
-		LeaderActiveAck ack(msg.seq);
+		LeaderActiveAck ack(msg.seq, m_pending_commit);
 		m_registry.send(msg.source, &ack);
 		return;
 	}
@@ -144,9 +167,6 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 		m_potential_leader_data = nullptr;
 		m_follower_data = std::make_unique<FollowerData>();
 		m_state = Follower;
-		if (m_client_callbacks.when_follower != nullptr) {
-			m_client_callbacks.when_follower(m_client_callbacks_data);
-		}
 		if (m_client_callbacks.on_leader_change != nullptr) {
 			m_client_callbacks.on_leader_change(msg.id, m_client_callbacks_data);
 		}
@@ -154,7 +174,7 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 		m_follower_data->m_last_leader_active = ts;
 		m_round = msg.round;
 		DLOG(INFO) << "Acking leadership from " << msg.id;
-		LeaderActiveAck ack(msg.seq);
+		LeaderActiveAck ack(msg.seq, m_pending_commit);
 		m_registry.send(msg.source, &ack);
 		return;
 	}

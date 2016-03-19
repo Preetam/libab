@@ -70,6 +70,28 @@ public:
 		uv_async_send(async);
 	}
 
+	void
+	confirm_append(uint64_t round)
+	{
+		auto async = new uv_async_t;
+		auto task = new std::packaged_task<void()>([=]() {
+			m_role->client_confirm_append(round);
+			uv_close((uv_handle_t*)async, [](uv_handle_t* handle) {
+				// delete packaged_task
+				auto func = reinterpret_cast<std::packaged_task<void()>*>(handle->data);
+				delete func;
+				// delete async
+				delete handle;
+			});
+		});
+		async->data = task;
+		uv_async_init(m_uv_loop.get(), async, [](uv_async_t* handle) {
+			auto func = reinterpret_cast<std::packaged_task<void()>*>(handle->data);
+			(*func)();
+		});
+		uv_async_send(async);
+	}
+
 private:
 	uint64_t                      m_id;
 	std::string                   m_listen_address;

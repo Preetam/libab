@@ -35,6 +35,7 @@ struct PotentialLeaderData
 {
 	uint64_t m_pending_votes;
 	uint64_t m_last_broadcast;
+	uint64_t m_ready_to_commit;
 }; // PotentialLeaderData
 
 struct FollowerData
@@ -53,6 +54,7 @@ public:
 	, m_id(id)
 	, m_round(0)
 	, m_cluster_size(cluster_size)
+	, m_pending_commit(0)
 	{
 	}
 
@@ -66,14 +68,27 @@ public:
 	handle_append(uint64_t ts, const AppendMessage& msg)
 	{
 		if (msg.round == m_round+1) {
-			AppendAck ack(msg.round);
-			++m_round;
-			m_registry.send(msg.source, &ack);
 			if (m_client_callbacks.on_append != nullptr) {
-				m_client_callbacks.on_append(msg.append_content.c_str(),
+				m_pending_append = std::make_unique<AppendMessage>(msg);
+				m_client_callbacks.on_append(msg.round, msg.append_content.c_str(),
 					msg.append_content.size(), m_client_callbacks_data);
 			}
 		}
+	}
+
+	void
+	client_confirm_append(uint64_t round)
+	{
+		if (m_pending_append == nullptr) {
+			return;
+		}
+		if (m_pending_append->round != round) {
+			return;
+		}
+		AppendAck ack(m_pending_append->round);
+		m_registry.send(m_pending_append->source, &ack);
+		m_pending_commit = round;
+		m_pending_append = nullptr;
 	}
 
 	void
@@ -117,6 +132,9 @@ public:
 			}
 			break;
 		case PotentialLeader:
+			if (msg.uncommitted_round == m_round+1) {
+				m_potential_leader_data->m_ready_to_commit++;
+			}
 			if (m_potential_leader_data->m_pending_votes > 0) {
 				m_potential_leader_data->m_pending_votes--;
 			}
@@ -165,6 +183,9 @@ private:
 	uint64_t      m_seq;
 	int           m_cluster_size;
 	State         m_state;
+
+	std::unique_ptr<AppendMessage> m_pending_append;
+	uint64_t                       m_pending_commit;
 
 	// Per-state data
 	std::unique_ptr<LeaderData>          m_leader_data;
