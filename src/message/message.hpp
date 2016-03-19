@@ -22,8 +22,7 @@ enum MESSAGE_TYPE : uint8_t
 	// Active leader acknowledgement
 	MSG_LEADER_ACTIVE_ACK,
 	MSG_APPEND,
-	MSG_APPEND_ACK,
-	MSG_REVERT
+	MSG_APPEND_ACK
 };
 
 inline
@@ -35,7 +34,6 @@ const char* MSG_STR(uint8_t type) {
 	case MSG_LEADER_ACTIVE_ACK: return "MSG_LEADER_ACTIVE_ACK";
 	case MSG_APPEND: return "MSG_APPEND";
 	case MSG_APPEND_ACK: return "MSG_APPEND_ACK";
-	case MSG_REVERT: return "MSG_REVERT";
 	}
 
 	return "MSG_INVALID";
@@ -388,51 +386,6 @@ public:
 
 	AppendAck(uint64_t round)
 	: Message(MSG_APPEND_ACK)
-	, round(round)
-	{
-	}
-
-	inline int
-	body_size() const
-	{
-		return 8;
-	}
-
-	inline int
-	pack_body(uint8_t* dest, int dest_len) const
-	{
-		if (dest_len < 8) {
-			return -1;
-		}
-		write64be(round, dest);
-		return 0;
-	}
-
-	inline int
-	unpack_body(uint8_t* src, int src_len)
-	{
-		if (src_len < 8) {
-			return -1;
-		}
-		round = read64be(src);
-		return 0;
-	}
-
-public:
-	uint64_t round;
-};
-
-class RevertMessage : public Message
-{
-public:
-	RevertMessage()
-	: Message(MSG_REVERT)
-	, round(0)
-	{
-	}
-
-	RevertMessage(uint64_t round)
-	: Message(MSG_REVERT)
 	, round(round)
 	{
 	}
