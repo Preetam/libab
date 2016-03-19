@@ -22,7 +22,8 @@ enum MESSAGE_TYPE : uint8_t
 	// Active leader acknowledgement
 	MSG_LEADER_ACTIVE_ACK,
 	MSG_APPEND,
-	MSG_APPEND_ACK
+	MSG_APPEND_ACK,
+	MSG_REVERT
 };
 
 inline
@@ -32,6 +33,9 @@ const char* MSG_STR(uint8_t type) {
 	case MSG_IDENT: return "MSG_IDENT";
 	case MSG_LEADER_ACTIVE: return "MSG_LEADER_ACTIVE";
 	case MSG_LEADER_ACTIVE_ACK: return "MSG_LEADER_ACTIVE_ACK";
+	case MSG_APPEND: return "MSG_APPEND";
+	case MSG_APPEND_ACK: return "MSG_APPEND_ACK";
+	case MSG_REVERT: return "MSG_REVERT";
 	}
 
 	return "MSG_INVALID";
@@ -335,18 +339,18 @@ public:
 	inline int
 	body_size() const
 	{
-		return 8 + 2 + append_content.size();
+		return 8 + 4 + append_content.size();
 	}
 
 	inline int
 	pack_body(uint8_t* dest, int dest_len) const {
-		if (dest_len < 8 + 2 + append_content.size()) {
+		if (dest_len < 8 + 4 + append_content.size()) {
 			return -1;
 		}
 		write64be(round, dest);
 		dest += 8;
-		write16be(append_content.size(), dest);
-		dest += 2;
+		write32be(append_content.size(), dest);
+		dest += 4;
 		memcpy(dest, append_content.c_str(), append_content.size());
 		return 0;
 	}
@@ -354,14 +358,14 @@ public:
 	inline int
 	unpack_body(uint8_t* src, int src_len)
 	{
-		if (src_len < 8 + 2) {
+		if (src_len < 8 + 4) {
 			return -1;
 		}
 		round = read64be(src);
 		src += 8;
-		uint16_t append_content_size = read16be(src);
-		src += 2;
-		if (src_len < 8 + 2 + append_content_size) {
+		uint32_t append_content_size = read16be(src);
+		src += 4;
+		if (src_len < 8 + 4 + append_content_size) {
 			return -2;
 		}
 	 append_content = std::string((const char*)src, append_content_size);
@@ -382,7 +386,7 @@ public:
 	{
 	}
 
-	AppendAck(uint8_t round)
+	AppendAck(uint64_t round)
 	: Message(MSG_APPEND_ACK)
 	, round(round)
 	{
@@ -391,29 +395,74 @@ public:
 	inline int
 	body_size() const
 	{
-		return 1;
+		return 8;
 	}
 
 	inline int
 	pack_body(uint8_t* dest, int dest_len) const
 	{
-		if (dest_len < 1) {
+		if (dest_len < 8) {
 			return -1;
 		}
-		write8be(round, dest);
+		write64be(round, dest);
 		return 0;
 	}
 
 	inline int
 	unpack_body(uint8_t* src, int src_len)
 	{
-		if (src_len < 1) {
+		if (src_len < 8) {
 			return -1;
 		}
-		round = read8be(src);
+		round = read64be(src);
 		return 0;
 	}
 
 public:
-	uint8_t round;
+	uint64_t round;
+};
+
+class RevertMessage : public Message
+{
+public:
+	RevertMessage()
+	: Message(MSG_REVERT)
+	, round(0)
+	{
+	}
+
+	RevertMessage(uint64_t round)
+	: Message(MSG_REVERT)
+	, round(round)
+	{
+	}
+
+	inline int
+	body_size() const
+	{
+		return 8;
+	}
+
+	inline int
+	pack_body(uint8_t* dest, int dest_len) const
+	{
+		if (dest_len < 8) {
+			return -1;
+		}
+		write64be(round, dest);
+		return 0;
+	}
+
+	inline int
+	unpack_body(uint8_t* src, int src_len)
+	{
+		if (src_len < 8) {
+			return -1;
+		}
+		round = read64be(src);
+		return 0;
+	}
+
+public:
+	uint64_t round;
 };

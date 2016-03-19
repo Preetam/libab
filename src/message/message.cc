@@ -89,6 +89,9 @@ decode_message(std::unique_ptr<Message>& m, uint8_t* src, int src_len) {
 	case MSG_APPEND_ACK:
 		m = std::make_unique<AppendAck>();
 		break;
+	case MSG_REVERT:
+		m = std::make_unique<RevertMessage>();
+		break;
 	default:
 		return -1;
 	}
