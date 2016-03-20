@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-project(sacq)
+project(libab)
 SET(CMAKE_CXX_FLAGS "-std=c++14")
 include_directories(
 	include
@@ -11,7 +11,7 @@ include_directories(
 add_subdirectory(dep/glog)
 add_subdirectory(dep/libuv)
 
-add_executable(sacq
+add_executable(main
 	src/main.cc
 )
 
@@ -23,9 +23,7 @@ add_library(ab SHARED
 	src/c.cc
 )
 
-target_link_libraries(sacq glog)
-target_link_libraries(sacq uv)
-target_link_libraries(sacq ab)
-
 target_link_libraries(ab glog)
 target_link_libraries(ab uv)
+target_link_libraries(main ab)
+

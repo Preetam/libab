@@ -9,7 +9,7 @@
 #include "flags.hpp"
 #include "node/node.hpp"
 
-const std::string NAME    = "sacq";
+const std::string NAME    = "libab-main";
 const std::string VERSION = "DEV";
 
 int
