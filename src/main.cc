@@ -56,7 +56,8 @@ main(int argc, char* argv[]) {
 		cluster_size = 1;
 	}
 
-	Node n(id, cluster_size);
+	ab_callbacks_t callbacks;
+	Node n(id, cluster_size, callbacks, nullptr);
 	if (n.start(addr_str) < 0) {
 		LOG(WARNING) << "failed to start";
 		return 1;

@@ -12,12 +12,20 @@ add_subdirectory(dep/glog)
 add_subdirectory(dep/libuv)
 
 add_executable(sacq
+	src/main.cc
+)
+
+add_library(ab SHARED
 	src/message/message.cc
 	src/peer/peer.cc
 	src/node/node.cc
 	src/node/role.cc
-	src/main.cc
+	src/c.cc
 )
 
 target_link_libraries(sacq glog)
 target_link_libraries(sacq uv)
+target_link_libraries(sacq ab)
+
+target_link_libraries(ab glog)
+target_link_libraries(ab uv)
