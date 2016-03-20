@@ -27,6 +27,7 @@ struct LeaderData
 	uint64_t m_pending_votes;
 	uint64_t m_last_broadcast;
 	uint64_t m_pending_round;
+	uint64_t m_ready_to_commit;
 	std::function<void(int, void*)> m_callback;
 	void* m_callback_data;
 }; // LeaderData
@@ -67,6 +68,7 @@ public:
 	void
 	handle_append(uint64_t ts, const AppendMessage& msg)
 	{
+		LOG(INFO) << "handle_append";
 		if (msg.round == m_round+1) {
 			if (m_client_callbacks.on_append != nullptr) {
 				m_pending_append = std::make_unique<AppendMessage>(msg);
@@ -79,10 +81,13 @@ public:
 	void
 	client_confirm_append(uint64_t round)
 	{
+		LOG(INFO) << "client_confirm_append " << round;
 		if (m_pending_append == nullptr) {
+			LOG(INFO) << "m_pending_append == nullptr";
 			return;
 		}
 		if (m_pending_append->round != round) {
+			LOG(INFO) << "m_pending_append->round != round";
 			return;
 		}
 		AppendAck ack(m_pending_append->round);
@@ -94,6 +99,7 @@ public:
 	void
 	handle_append_ack(uint64_t ts, const AppendAck& msg)
 	{
+		LOG(INFO) << "handle_append_ack";
 		if (m_state != Leader) {
 			return;
 		}
@@ -107,15 +113,6 @@ public:
 				m_leader_data->m_pending_votes--;
 			}
 		}
-
-		if (m_leader_data->m_pending_votes == 0) {
-			// We got all of the votes already.
-			m_round++;
-			m_leader_data->m_pending_round = 0;
-			m_leader_data->m_callback(0, m_leader_data->m_callback_data);
-			m_leader_data->m_callback = nullptr;
-			m_leader_data->m_callback_data = nullptr;
-		}
 	}
 
 	void
@@ -127,6 +124,9 @@ public:
 		}
 		switch (m_state) {
 		case Leader:
+			if (msg.uncommitted_round == m_pending_commit) {
+				m_leader_data->m_ready_to_commit++;
+			}
 			if (m_leader_data->m_pending_votes > 0) {
 				m_leader_data->m_pending_votes--;
 			}
@@ -155,8 +155,10 @@ public:
 		m_leader_data->m_pending_round = m_round+1;
 		m_leader_data->m_callback = cb;
 		m_leader_data->m_callback_data = data;
+		m_leader_data->m_ready_to_commit = 0;
 		AppendMessage msg(m_leader_data->m_pending_round, append_content);
 		m_registry.broadcast(&msg);
+		LOG(INFO) << "Sending append...";
 	}
 
 	void

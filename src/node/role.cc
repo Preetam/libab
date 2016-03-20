@@ -41,10 +41,29 @@ Role :: periodic_leader(uint64_t ts) {
 	if (m_leader_data->m_pending_votes == 0) {
 		// We got all of the votes already.
 		if (m_leader_data->m_callback != nullptr) {
-			// Pending callback. Call it.
-			m_leader_data->m_callback(0, m_leader_data->m_callback_data);
-			m_leader_data->m_callback = nullptr;
-			m_leader_data->m_callback_data = nullptr;
+			// Pending append.
+			LOG(INFO) << "got all pending votes and there is an append pending.";
+			if (m_pending_commit != 0) {
+				LOG(INFO) << "append not yet marked as committed";
+				if (m_leader_data->m_ready_to_commit >= m_cluster_size/2) {
+					LOG(INFO) << "majority have committed";
+					// Majority have committed.
+					// Tell the client it was successful.
+					m_leader_data->m_callback(0, m_leader_data->m_callback_data);
+					m_leader_data->m_callback = nullptr;
+					m_leader_data->m_callback_data = nullptr;
+					m_pending_commit = 0;
+				} else {
+					LOG(INFO) << "majority failed to commit";
+					// Failed to commit
+					m_leader_data->m_callback(-1, m_leader_data->m_callback_data);
+					m_leader_data->m_callback = nullptr;
+					m_leader_data->m_callback_data = nullptr;
+				}
+			} else {
+				LOG(INFO) << "got all pending votes for append; commit is pending";
+				m_pending_commit = m_leader_data->m_pending_round;
+			}
 		}
 		if (ts - m_leader_data->m_last_broadcast > 100e6) {
 			// It's been over 100 ms since the last broadcast.
@@ -52,9 +71,9 @@ Role :: periodic_leader(uint64_t ts) {
 			++m_seq;
 			LeaderActiveMessage msg(m_id, m_round, m_seq);
 			m_registry.broadcast(&msg);
-			m_leader_data->m_pending_votes = m_cluster_size/2;
 			m_leader_data->m_last_broadcast = ts;
 		}
+		m_leader_data->m_pending_votes = m_cluster_size/2;
 	}
 }
 
