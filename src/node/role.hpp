@@ -28,6 +28,7 @@ struct LeaderData
 	uint64_t m_last_broadcast;
 	uint64_t m_pending_round;
 	uint64_t m_ready_to_commit;
+	uint64_t m_commit_check_seq;
 	std::function<void(int, void*)> m_callback;
 	void* m_callback_data;
 }; // LeaderData
@@ -113,6 +114,7 @@ public:
 				m_leader_data->m_pending_votes--;
 			}
 		}
+		LOG(INFO) << "pending votes: " << m_leader_data->m_pending_votes;
 	}
 
 	void
@@ -126,8 +128,12 @@ public:
 		case Leader:
 			if (msg.uncommitted_round == m_pending_commit) {
 				m_leader_data->m_ready_to_commit++;
+			} else {
+				LOG(INFO) << "uncommitted_round, m_pending_commit = " <<
+					msg.uncommitted_round << ", " << m_pending_commit;
 			}
 			if (m_leader_data->m_pending_votes > 0) {
+				//LOG(INFO) << "handle_leader_active_ack";
 				m_leader_data->m_pending_votes--;
 			}
 			break;
@@ -152,6 +158,8 @@ public:
 			cb(-1, data);
 			return;
 		}
+		m_seq++;
+		m_leader_data->m_pending_votes = m_cluster_size/2;
 		m_leader_data->m_pending_round = m_round+1;
 		m_leader_data->m_callback = cb;
 		m_leader_data->m_callback_data = data;
@@ -159,6 +167,7 @@ public:
 		AppendMessage msg(m_leader_data->m_pending_round, append_content);
 		m_registry.broadcast(&msg);
 		LOG(INFO) << "Sending append...";
+		m_leader_data->m_last_broadcast = uv_hrtime();
 	}
 
 	void

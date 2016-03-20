@@ -53,6 +53,7 @@ Role :: periodic_leader(uint64_t ts) {
 					m_leader_data->m_callback = nullptr;
 					m_leader_data->m_callback_data = nullptr;
 					m_pending_commit = 0;
+					m_round++;
 				} else {
 					LOG(INFO) << "majority failed to commit";
 					// Failed to commit
@@ -63,16 +64,27 @@ Role :: periodic_leader(uint64_t ts) {
 			} else {
 				LOG(INFO) << "got all pending votes for append; commit is pending";
 				m_pending_commit = m_leader_data->m_pending_round;
+				m_leader_data->m_commit_check_seq = m_seq+1;
+				m_leader_data->m_ready_to_commit = 0;
+				m_leader_data->m_pending_votes = m_cluster_size/2;
+				++m_seq;
+				LeaderActiveMessage msg(m_id, m_round, m_seq);
+				m_registry.broadcast(&msg);
+				m_leader_data->m_last_broadcast = ts;
+				m_leader_data->m_pending_votes = m_cluster_size/2;
+				return;
 			}
 		}
-		if (ts - m_leader_data->m_last_broadcast > 100e6) {
-			// It's been over 100 ms since the last broadcast.
-			// Broadcast another heartbeat.
-			++m_seq;
-			LeaderActiveMessage msg(m_id, m_round, m_seq);
-			m_registry.broadcast(&msg);
-			m_leader_data->m_last_broadcast = ts;
-		}
+		m_leader_data->m_pending_votes = m_cluster_size/2;
+	}
+
+	if (ts - m_leader_data->m_last_broadcast > 50e6) {
+		// It's been over 100 ms since the last broadcast.
+		// Broadcast another heartbeat.
+		++m_seq;
+		LeaderActiveMessage msg(m_id, m_round, m_seq);
+		m_registry.broadcast(&msg);
+		m_leader_data->m_last_broadcast = ts;
 		m_leader_data->m_pending_votes = m_cluster_size/2;
 	}
 }
@@ -182,6 +194,14 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 		// From a node that's ahead and/or more authoritative.
 		// Drop down to a follower state and make this node our leader.
 		DLOG(INFO) << "Active leader msg from more authoritative node. Dropping to follower state.";
+
+		if (m_state == Leader) {
+			if (m_leader_data->m_callback != nullptr) {
+				// Append was not confirmed by a majority.
+				m_leader_data->m_callback(-1, m_leader_data->m_callback_data);
+			}
+		}
+
 		m_leader_data = nullptr;
 		m_potential_leader_data = nullptr;
 		m_follower_data = std::make_unique<FollowerData>();
