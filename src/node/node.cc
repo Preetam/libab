@@ -118,11 +118,5 @@ Node :: handle_message(const Message* msg) {
 	case MSG_LEADER_ACTIVE_ACK:
 		m_role->handle_leader_active_ack(now, static_cast<const LeaderActiveAck&>(*msg));
 		break;
-	case MSG_APPEND:
-		m_role->handle_append(now, static_cast<const AppendMessage&>(*msg));
-		break;
-	case MSG_APPEND_ACK:
-		m_role->handle_append_ack(now, static_cast<const AppendAck&>(*msg));
-		break;
 	}
 }
