@@ -92,7 +92,9 @@ public:
 			cb(-1, data);
 			return;
 		}
-
+		LOG(INFO) << "send_append";
+		m_leader_data->m_callback = cb;
+		m_leader_data->m_callback_data = data;
 		LeaderActiveMessage msg(m_id, ++m_seq, m_commit, m_commit+1, append_content);
 		m_registry.broadcast(&msg);
 		m_leader_data->m_last_broadcast = uv_hrtime();

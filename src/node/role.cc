@@ -30,6 +30,7 @@ Role :: periodic_leader(uint64_t ts) {
 				}
 			}
 			if (majority_commit > m_commit) {
+				LOG(INFO) << "last commit = " << m_commit << ", majority = " << majority_commit;
 				m_commit = majority_commit;
 				if (m_client_callbacks.on_commit != nullptr) {
 					m_client_callbacks.on_commit(m_commit, m_client_callbacks_data);
@@ -39,6 +40,8 @@ Role :: periodic_leader(uint64_t ts) {
 			if (m_leader_data->m_callback != nullptr) {
 				// Append was confirmed by a majority.
 				m_leader_data->m_callback(0, m_leader_data->m_callback_data);
+				m_leader_data->m_callback = nullptr;
+				m_leader_data->m_callback_data = nullptr;
 			}
 
 			++m_seq;
@@ -60,6 +63,8 @@ Role :: periodic_leader(uint64_t ts) {
 		if (m_leader_data->m_callback != nullptr) {
 			// Append was not confirmed by a majority.
 			m_leader_data->m_callback(-1, m_leader_data->m_callback_data);
+			m_leader_data->m_callback = nullptr;
+			m_leader_data->m_callback_data = nullptr;
 		}
 		m_leader_data = nullptr;
 		m_state = PotentialLeader;
@@ -123,6 +128,8 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 				if (m_leader_data->m_callback != nullptr) {
 					// Append was not confirmed by a majority.
 					m_leader_data->m_callback(-1, m_leader_data->m_callback_data);
+					m_leader_data->m_callback = nullptr;
+					m_leader_data->m_callback_data = nullptr;
 				}
 				m_potential_leader_data = nullptr;
 			}
@@ -151,9 +158,12 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 		}
 	}
 
-	if (m_client_callbacks.on_append != nullptr) {
-		m_client_callbacks.on_append(msg.next, msg.next_content.c_str(),
-			msg.next_content.size(), m_client_callbacks_data);
+	if (msg.next != 0) {
+		LOG(INFO) << "next = " << msg.next;
+		if (m_client_callbacks.on_append != nullptr) {
+			m_client_callbacks.on_append(msg.next, msg.next_content.c_str(),
+				msg.next_content.size(), m_client_callbacks_data);
+		}
 	}
 
 	// Send ack.
