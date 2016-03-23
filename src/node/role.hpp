@@ -27,6 +27,7 @@ struct LeaderData
 	uint64_t                               m_last_broadcast;
 	std::function<void(int, void*)>        m_callback;
 	void*                                  m_callback_data;
+	uint64_t                               m_pending_commit;
 	std::unordered_map<uint64_t, uint64_t> m_acks;
 }; // LeaderData
 
@@ -79,9 +80,14 @@ public:
 	void
 	client_confirm_append(uint64_t commit)
 	{
-		if (m_state == Follower &&
-			commit > m_commit) {
+		if (m_state != Follower) {
+			return;
+		}
+		if (commit > m_commit) {
 			m_commit = commit;
+			// Send ack.
+			LeaderActiveAck ack(m_id, m_seq, m_commit);
+			m_registry.send_to_id(m_follower_data->m_current_leader, &ack);
 		}
 	}
 
@@ -92,9 +98,9 @@ public:
 			cb(-1, data);
 			return;
 		}
-		LOG(INFO) << "send_append";
 		m_leader_data->m_callback = cb;
 		m_leader_data->m_callback_data = data;
+		m_leader_data->m_pending_commit = m_commit+1;
 		LeaderActiveMessage msg(m_id, ++m_seq, m_commit, m_commit+1, append_content);
 		m_registry.broadcast(&msg);
 		m_leader_data->m_last_broadcast = uv_hrtime();

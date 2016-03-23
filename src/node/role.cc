@@ -30,18 +30,19 @@ Role :: periodic_leader(uint64_t ts) {
 				}
 			}
 			if (majority_commit > m_commit) {
-				LOG(INFO) << "last commit = " << m_commit << ", majority = " << majority_commit;
 				m_commit = majority_commit;
 				if (m_client_callbacks.on_commit != nullptr) {
 					m_client_callbacks.on_commit(m_commit, m_client_callbacks_data);
 				}
-			}
 
-			if (m_leader_data->m_callback != nullptr) {
-				// Append was confirmed by a majority.
-				m_leader_data->m_callback(0, m_leader_data->m_callback_data);
-				m_leader_data->m_callback = nullptr;
-				m_leader_data->m_callback_data = nullptr;
+				if (m_leader_data->m_pending_commit == m_commit) {
+					if (m_leader_data->m_callback != nullptr) {
+						// Append was confirmed by a majority.
+						m_leader_data->m_callback(0, m_leader_data->m_callback_data);
+						m_leader_data->m_callback = nullptr;
+						m_leader_data->m_callback_data = nullptr;
+					}
+				}
 			}
 
 			++m_seq;
@@ -56,7 +57,7 @@ Role :: periodic_leader(uint64_t ts) {
 		// It's been over 300 ms since the last broadcast.
 		DLOG(INFO) << "didn't get majority vote";
 		// Didn't get a majority. We're not a leader anymore.
-		LOG(INFO) << "Lost leadership";
+		DLOG(INFO) << "Lost leadership";
 		if (m_client_callbacks.lost_leadership != nullptr) {
 			m_client_callbacks.lost_leadership(m_client_callbacks_data);
 		}
@@ -122,7 +123,7 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 	if (m_state != Follower) {
 		if (msg.id < m_id) {
 			// Other node has more authority. Drop down to follower state.
-			LOG(INFO) << "dropping to follower state";
+			DLOG(INFO) << "dropping to follower state";
 			m_leader_data = nullptr;
 			if (m_state == Leader) {
 				if (m_leader_data->m_callback != nullptr) {
@@ -159,10 +160,12 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 	}
 
 	if (msg.next != 0) {
-		LOG(INFO) << "next = " << msg.next;
 		if (m_client_callbacks.on_append != nullptr) {
 			m_client_callbacks.on_append(msg.next, msg.next_content.c_str(),
 				msg.next_content.size(), m_client_callbacks_data);
+			m_seq = msg.seq;
+			m_follower_data->m_last_leader_active = ts;
+			return;
 		}
 	}
 

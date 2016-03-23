@@ -148,8 +148,6 @@ func append_go_cb(status C.int, p unsafe.Pointer) {
 	defer registeredNodesLock.RUnlock()
 	node := registeredNodes[i]
 	if node.appendResult != nil {
-		fmt.Println("waiting for append result")
 		node.appendResult <- int(status)
 	}
-	fmt.Println("done waiting for append result")
 }

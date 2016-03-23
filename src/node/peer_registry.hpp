@@ -71,6 +71,13 @@ public:
 	}
 
 	void
+	send_to_id(uint64_t id, const Message* msg)
+	{
+		int index = m_peer_id_index[id];
+		send(index, msg);
+	}
+
+	void
 	broadcast(const Message* msg)
 	{
 		for (auto i = std::begin(m_peers); i != std::end(m_peers); ++i) {
