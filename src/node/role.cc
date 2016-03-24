@@ -19,18 +19,14 @@ void
 Role :: periodic_leader(uint64_t ts) {
 	if (ts - m_leader_data->m_last_broadcast > 50e6) {
 		if (m_leader_data->m_acks.size() >= m_cluster_size/2) {
-			uint64_t majority_commit = 0;
-			std::map<uint64_t, int> commits;
+			uint64_t max_commit = m_commit;
 			for (auto it = m_leader_data->m_acks.begin(); it != m_leader_data->m_acks.end(); ++it) {
-				commits[it->second]++;
-			}
-			for (auto it = commits.begin(); it != commits.end(); ++it) {
-				if (it->second >= m_cluster_size/2) {
-					majority_commit = it->first;
+				if (it->second > max_commit) {
+					max_commit = it->second;
 				}
 			}
-			if (majority_commit > m_commit) {
-				m_commit = majority_commit;
+			if (max_commit > m_commit) {
+				m_commit = max_commit;
 				if (m_client_callbacks.on_commit != nullptr) {
 					m_client_callbacks.on_commit(m_commit, m_client_callbacks_data);
 				}
@@ -161,9 +157,9 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 
 	if (msg.next != 0) {
 		if (m_client_callbacks.on_append != nullptr) {
+			m_seq = msg.seq;
 			m_client_callbacks.on_append(msg.next, msg.next_content.c_str(),
 				msg.next_content.size(), m_client_callbacks_data);
-			m_seq = msg.seq;
 			m_follower_data->m_last_leader_active = ts;
 			return;
 		}
@@ -172,6 +168,7 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 	// Send ack.
 	LeaderActiveAck ack(m_id, msg.seq, m_commit);
 	m_registry.send(msg.source, &ack);
+	m_follower_data->m_current_leader = msg.id;
 	m_follower_data->m_last_leader_active = ts;
 }
 

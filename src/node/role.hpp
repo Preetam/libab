@@ -83,12 +83,10 @@ public:
 		if (m_state != Follower) {
 			return;
 		}
-		if (commit > m_commit) {
-			m_commit = commit;
-			// Send ack.
-			LeaderActiveAck ack(m_id, m_seq, m_commit);
-			m_registry.send_to_id(m_follower_data->m_current_leader, &ack);
-		}
+
+		// Send ack.
+		LeaderActiveAck ack(m_id, m_seq, commit);
+		m_registry.send_to_id(m_follower_data->m_current_leader, &ack);
 	}
 
 	void
@@ -96,6 +94,11 @@ public:
 	{
 		if (m_state != Leader) {
 			cb(-1, data);
+			return;
+		}
+		if (m_leader_data->m_callback != nullptr) {
+			// There's already a pending append.
+			cb(-2, data);
 			return;
 		}
 		m_leader_data->m_callback = cb;

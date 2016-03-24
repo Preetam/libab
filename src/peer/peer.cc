@@ -118,6 +118,7 @@ Peer :: reconnect()
 	if (addr.parse(m_address) < 0) {
 		LOG(WARNING) << "failed to parse address: " << m_address;
 	}
+	LOG(INFO) << "reconnecting to " << m_address;
 	struct sockaddr_storage sockaddr;
 	addr.get_sockaddr(reinterpret_cast<struct sockaddr*>(&sockaddr));
 	uv_tcp_connect(req, m_tcp.get(), reinterpret_cast<struct sockaddr*>(&sockaddr),
