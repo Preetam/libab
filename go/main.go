@@ -47,7 +47,9 @@ func main() {
 	}
 	handler.nodeNumber = node.callbacksNum
 	node.callbackHandler = handler
-	fmt.Println(node.AddPeer("127.0.0.1:2021"))
+	if *listen != "127.0.0.1:2021" {
+		fmt.Println(node.AddPeer("127.0.0.1:2021"))
+	}
 	go func() {
 		node.Run()
 		panic("unreachable")
