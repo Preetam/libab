@@ -105,7 +105,7 @@ public:
 	}
 
 	inline int
-	body_size()
+	body_size() const
 	{
 		return 8 + 2 + address.size();
 	}
@@ -113,7 +113,7 @@ public:
 	inline int
 	pack_body(uint8_t* dest, int dest_len) const
 	{
-		if (dest_len < 8 + 2 + address.size()) {
+		if (dest_len < body_size()) {
 			return -1;
 		}
 		write64be(id, dest);
@@ -127,7 +127,7 @@ public:
 	inline int
 	unpack_body(uint8_t* src, int src_len)
 	{
-		if (src_len < 8 + 2) {
+		if (src_len < body_size()) {
 			return -1;
 		}
 		id = read64be(src);
@@ -167,7 +167,7 @@ public:
 
 	inline int
 	pack_body(uint8_t* dest, int dest_len) const {
-		if (dest_len < 8 + 2 + address.size()) {
+		if (dest_len < body_size()) {
 			return -1;
 		}
 		write64be(id, dest);
@@ -181,7 +181,7 @@ public:
 	inline int
 	unpack_body(uint8_t* src, int src_len)
 	{
-		if (src_len < 8 + 2) {
+		if (src_len < body_size()) {
 			return -1;
 		}
 		id = read64be(src);
