@@ -1,11 +1,12 @@
 #pragma once
 
-#include <glog/logging.h>
 #include <uv.h>
+#include <memory>
 #include <cstdint>
 #include <functional>
-
+#include <glog/logging.h>
 #include <cpl/net/sockaddr.hpp>
+
 #include "message/decode.hpp"
 
 const int READ_BUFFER_SIZE = 16*1024;
