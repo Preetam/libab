@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ab.h"
+#include <ab.h>
 
 extern void on_append_go_cb(uint64_t round, char*, int, void*);
 void on_commit_go_cb(uint64_t round, void* cb_data);

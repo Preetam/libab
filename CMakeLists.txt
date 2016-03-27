@@ -27,3 +27,6 @@ target_link_libraries(ab glog)
 target_link_libraries(ab uv)
 target_link_libraries(main ab)
 
+install(TARGETS ab DESTINATION lib)
+install(FILES src/ab.h DESTINATION include)
+

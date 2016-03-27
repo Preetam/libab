@@ -7,11 +7,10 @@ import (
 )
 
 /*
-#cgo CFLAGS: -I../src
-#cgo LDFLAGS: -L../build -lab
+#cgo LDFLAGS: -lab
 
 #include <stdlib.h>
-#include "ab.h"
+#include <ab.h>
 #include "callback.h"
 */
 import "C"
