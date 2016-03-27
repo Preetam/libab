@@ -43,6 +43,7 @@ You will also need CMake version 3.0 or higher.
 $ mkdir build && cd build
 $ cmake ..
 $ make
+$ sudo make install # Optional
 ```
 
 ## License
