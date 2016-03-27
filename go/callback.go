@@ -27,8 +27,8 @@ type Node struct {
 }
 
 type CallbackHandler interface {
-	OnAppend(round uint64, data string)
-	OnCommit(round uint64)
+	OnAppend(commit uint64, data string)
+	OnCommit(commit uint64)
 	GainedLeadership()
 	LostLeadership()
 	OnLeaderChange(leaderID uint64)
@@ -83,9 +83,9 @@ func (n *Node) Append(data string) error {
 	return fmt.Errorf("append failed :(")
 }
 
-func (n *Node) ConfirmAppend(round uint64) {
+func (n *Node) ConfirmAppend(commit uint64) {
 	fmt.Println("confirm append")
-	C.ab_confirm_append(n.ptr, C.uint64_t(round))
+	C.ab_confirm_append(n.ptr, C.uint64_t(commit))
 }
 
 func (n *Node) AddPeer(address string) error {
@@ -99,21 +99,21 @@ func (n *Node) AddPeer(address string) error {
 }
 
 //export on_append_go_cb
-func on_append_go_cb(round C.uint64_t, str *C.char, length C.int, p unsafe.Pointer) {
+func on_append_go_cb(commit C.uint64_t, str *C.char, length C.int, p unsafe.Pointer) {
 	i := *(*int)(p)
 	registeredNodesLock.RLock()
 	defer registeredNodesLock.RUnlock()
 	node := registeredNodes[i]
-	node.callbackHandler.OnAppend(uint64(round), C.GoStringN(str, length))
+	node.callbackHandler.OnAppend(uint64(commit), C.GoStringN(str, length))
 }
 
 //export on_commit_go_cb
-func on_commit_go_cb(round C.uint64_t, p unsafe.Pointer) {
+func on_commit_go_cb(commit C.uint64_t, p unsafe.Pointer) {
 	i := *(*int)(p)
 	registeredNodesLock.RLock()
 	defer registeredNodesLock.RUnlock()
 	node := registeredNodes[i]
-	node.callbackHandler.OnCommit(uint64(round))
+	node.callbackHandler.OnCommit(uint64(commit))
 }
 
 //export gained_leadership_go_cb

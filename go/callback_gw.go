@@ -5,12 +5,12 @@ package main
 #include <stdlib.h>
 #include "callback.h"
 
-void on_append_go_cb_gateway(uint64_t round, const char* data, int data_len, void* cb_data) {
-	on_append_go_cb(round, (char*)data, data_len, cb_data);
+void on_append_go_cb_gateway(uint64_t commit, const char* data, int data_len, void* cb_data) {
+	on_append_go_cb(commit, (char*)data, data_len, cb_data);
 }
 
-void on_commit_go_cb_gateway(uint64_t round, void* cb_data) {
-	on_commit_go_cb(round, cb_data);
+void on_commit_go_cb_gateway(uint64_t commit, void* cb_data) {
+	on_commit_go_cb(commit, cb_data);
 }
 
 void gained_leadership_go_cb_gateway(void* cb_data) {

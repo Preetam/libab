@@ -10,15 +10,15 @@ type SimpleHandler struct {
 	nodeNumber int
 }
 
-func (h *SimpleHandler) OnAppend(round uint64, data string) {
-	fmt.Println("OnAppend", round, data)
+func (h *SimpleHandler) OnAppend(commit uint64, data string) {
+	fmt.Println("OnAppend", commit, data)
 	registeredNodesLock.RLock()
 	defer registeredNodesLock.RUnlock()
-	registeredNodes[h.nodeNumber].ConfirmAppend(round)
+	registeredNodes[h.nodeNumber].ConfirmAppend(commit)
 }
 
-func (h *SimpleHandler) OnCommit(round uint64) {
-	fmt.Println("OnCommit", round)
+func (h *SimpleHandler) OnCommit(commit uint64) {
+	fmt.Println("OnCommit", commit)
 }
 
 func (h *SimpleHandler) GainedLeadership() {
