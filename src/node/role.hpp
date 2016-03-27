@@ -65,6 +65,7 @@ public:
 	, m_seq(0)
 	, m_cluster_size(cluster_size)
 	, m_commit(0)
+	, m_round(0)
 	{
 	}
 
@@ -85,7 +86,7 @@ public:
 		}
 
 		// Send ack.
-		LeaderActiveAck ack(m_id, m_seq, commit);
+		LeaderActiveAck ack(m_id, m_seq, commit, m_round);
 		m_registry.send_to_id(m_follower_data->m_current_leader, &ack);
 	}
 
@@ -104,7 +105,7 @@ public:
 		m_leader_data->m_callback = cb;
 		m_leader_data->m_callback_data = data;
 		m_leader_data->m_pending_commit = m_commit+1;
-		LeaderActiveMessage msg(m_id, ++m_seq, m_commit, m_commit+1, append_content);
+		LeaderActiveMessage msg(m_id, ++m_seq, m_commit, m_round, m_commit+1, append_content);
 		m_registry.broadcast(&msg);
 		m_leader_data->m_last_broadcast = uv_hrtime();
 		m_leader_data->m_acks.clear();
@@ -115,6 +116,12 @@ public:
 	{
 		m_client_callbacks = callbacks;
 		m_client_callbacks_data = callbacks_data;
+	}
+
+	void
+	set_committed(uint64_t commit)
+	{
+		m_commit = commit;
 	}
 
 private:
@@ -134,6 +141,7 @@ private:
 	int           m_cluster_size;
 	State         m_state;
 	uint64_t      m_commit;
+	uint64_t      m_round;
 
 	// Per-state data
 	std::unique_ptr<LeaderData>          m_leader_data;

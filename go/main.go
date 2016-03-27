@@ -37,6 +37,7 @@ func main() {
 	nodeID := flag.Uint64("id", 1, "")
 	clusterSize := flag.Int("cluster-size", 1, "")
 	listen := flag.String("listen", "127.0.0.1:2020", "")
+	commit := flag.Uint64("commit", 0, "")
 	flag.Parse()
 
 	handler := &SimpleHandler{}
@@ -44,6 +45,9 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 		return
+	}
+	if *commit > 0 {
+		node.SetCommitted(*commit)
 	}
 	handler.nodeNumber = node.callbacksNum
 	node.callbackHandler = handler

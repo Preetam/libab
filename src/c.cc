@@ -12,6 +12,11 @@ ab_node_create(uint64_t id, int cluster_size, ab_callbacks_t callbacks, void* da
 	return node;
 }
 
+void
+ab_set_committed(ab_node_t* node, uint64_t commit) {
+	node->rep->set_committed(commit);
+}
+
 int
 ab_listen(ab_node_t* node, const char* address) {
 	return node->rep->start(address);

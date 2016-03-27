@@ -62,6 +62,10 @@ func NewNode(id uint64,
 	return n, nil
 }
 
+func (n *Node) SetCommitted(commit uint64) {
+	C.ab_set_committed(n.ptr, C.uint64_t(commit))
+}
+
 func (n *Node) Run() error {
 	C.ab_run(n.ptr)
 	return fmt.Errorf("failed")
@@ -147,7 +151,7 @@ func append_go_cb(status C.int, p unsafe.Pointer) {
 	registeredNodesLock.RLock()
 	defer registeredNodesLock.RUnlock()
 	node := registeredNodes[i]
-	if node.appendResult != nil {
+	if node != nil && node.appendResult != nil {
 		node.appendResult <- int(status)
 	}
 }

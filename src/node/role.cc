@@ -42,7 +42,7 @@ Role :: periodic_leader(uint64_t ts) {
 			}
 
 			++m_seq;
-			LeaderActiveMessage msg(m_id, m_seq, m_commit);
+			LeaderActiveMessage msg(m_id, m_seq, m_commit, m_round);
 			m_registry.broadcast(&msg);
 			m_leader_data->m_last_broadcast = ts;
 			m_leader_data->m_acks.clear();
@@ -85,13 +85,14 @@ Role :: periodic_potential_leader(uint64_t ts) {
 			m_leader_data->m_acks = m_potential_leader_data->m_acks;
 			m_potential_leader_data = nullptr;
 			m_state = Leader;
+			m_round++;
 			return;
 		}
 
 		// Try again.
 		++m_seq;
 		m_potential_leader_data->m_acks.clear();
-		LeaderActiveMessage msg(m_id, m_seq, m_commit);
+		LeaderActiveMessage msg(m_id, m_seq, m_commit, m_round);
 		m_registry.broadcast(&msg);
 		m_potential_leader_data->m_last_broadcast = ts;
 	}
@@ -134,12 +135,18 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 			m_state = Follower;
 			m_follower_data->m_current_leader = msg.id;
 		} else {
+			if (msg.round > m_round) {
+				m_round = msg.round;
+			}
 			return;
 		}
 	}
 
 	if (m_id < msg.id) {
 		// We're more authoritative.
+		if (msg.round > m_round) {
+			m_round = msg.round;
+		}
 		return;
 	}
 
@@ -150,9 +157,15 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 
 	if (msg.committed > m_commit) {
 		m_commit = msg.committed;
-		if (m_client_callbacks.on_commit != nullptr) {
-			m_client_callbacks.on_commit(m_commit, m_client_callbacks_data);
+		if (msg.round == m_round) {
+			if (m_client_callbacks.on_commit != nullptr) {
+				m_client_callbacks.on_commit(m_commit, m_client_callbacks_data);
+			}
 		}
+	}
+
+	if (msg.round > m_round) {
+		m_round = msg.round;
 	}
 
 	if (msg.next != 0) {
@@ -166,7 +179,7 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 	}
 
 	// Send ack.
-	LeaderActiveAck ack(m_id, msg.seq, m_commit);
+	LeaderActiveAck ack(m_id, msg.seq, m_commit, m_round);
 	m_registry.send(msg.source, &ack);
 	m_follower_data->m_current_leader = msg.id;
 	m_follower_data->m_last_leader_active = ts;
@@ -177,6 +190,10 @@ Role :: handle_leader_active_ack(uint64_t ts, const LeaderActiveAck& msg) {
 	if (m_state == Follower) {
 		// Nothing to do.
 		return;
+	}
+
+	if (msg.round > m_round) {
+		m_round = msg.round;
 	}
 
 	if (m_state == Leader) {

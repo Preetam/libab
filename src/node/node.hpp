@@ -71,11 +71,11 @@ public:
 	}
 
 	void
-	confirm_append(uint64_t round)
+	confirm_append(uint64_t commit)
 	{
 		auto async = new uv_async_t;
 		auto task = new std::packaged_task<void()>([=]() {
-			m_role->client_confirm_append(round);
+			m_role->client_confirm_append(commit);
 			uv_close((uv_handle_t*)async, [](uv_handle_t* handle) {
 				// delete packaged_task
 				auto func = reinterpret_cast<std::packaged_task<void()>*>(handle->data);
@@ -90,6 +90,12 @@ public:
 			(*func)();
 		});
 		uv_async_send(async);
+	}
+
+	void
+	set_committed(uint64_t commit)
+	{
+		m_role->set_committed(commit);
 	}
 
 private:
