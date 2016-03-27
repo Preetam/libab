@@ -7,8 +7,8 @@ import (
 )
 
 /*
-#cgo CFLAGS: -I/Users/preetam/git/Preetam/libab/src
-#cgo LDFLAGS: -L/Users/preetam/git/Preetam/libab/build -lab
+#cgo CFLAGS: -I../src
+#cgo LDFLAGS: -L../build -lab
 
 #include <stdlib.h>
 #include "ab.h"
