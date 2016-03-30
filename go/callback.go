@@ -1,4 +1,4 @@
-package main
+package ab
 
 import (
 	"fmt"
@@ -84,7 +84,6 @@ func (n *Node) Append(data string) error {
 }
 
 func (n *Node) ConfirmAppend(commit uint64) {
-	fmt.Println("confirm append")
 	C.ab_confirm_append(n.ptr, C.uint64_t(commit))
 }
 
