@@ -11,13 +11,13 @@ Builds may succeed with other BSDs, but they have not been verified.
 If you're using FreeBSD, you will need to install `libexecinfo`. You can do that using `pkg`:
 
 ```sh
-# pkg install libexecinfo
+pkg install libexecinfo
 ```
 
 This repository uses submodules. The following will fetch them if you haven't done so already:
 
 ```sh
-$ git submodule update --init --recursive
+git submodule update --init --recursive
 ```
 
 You will also need CMake version 3.0 or higher.
@@ -25,10 +25,10 @@ You will also need CMake version 3.0 or higher.
 ### Building
 
 ```sh
-$ mkdir build && cd build
-$ cmake ..
-$ make
-$ sudo make install # Optional
+mkdir build && cd build
+cmake ..
+make
+sudo make install # Optional
 ```
 
 ## License
