@@ -13,8 +13,8 @@ ab_node_create(uint64_t id, int cluster_size, ab_callbacks_t callbacks, void* da
 }
 
 void
-ab_set_committed(ab_node_t* node, uint64_t commit) {
-	node->rep->set_committed(commit);
+ab_set_committed(ab_node_t* node, uint64_t round, uint64_t commit) {
+	node->rep->set_committed(round, commit);
 }
 
 int
@@ -47,8 +47,8 @@ ab_append(ab_node_t* node, const char* content, int content_len,
 }
 
 void
-ab_confirm_append(ab_node_t* node, uint64_t round) {
-	node->rep->confirm_append(round);
+ab_confirm_append(ab_node_t* node, uint64_t round, uint64_t commit) {
+	node->rep->confirm_append(round, commit);
 }
 
 int

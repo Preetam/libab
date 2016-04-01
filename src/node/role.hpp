@@ -24,11 +24,11 @@ struct LeaderData
 	{
 	}
 
-	uint64_t                               m_last_broadcast;
-	std::function<void(int, void*)>        m_callback;
-	void*                                  m_callback_data;
-	uint64_t                               m_pending_commit;
-	std::unordered_map<uint64_t, uint64_t> m_acks;
+	uint64_t                                            m_last_broadcast;
+	std::function<void(int, uint64_t, uint64_t, void*)> m_callback;
+	void*                                               m_callback_data;
+	uint64_t                                            m_pending_commit;
+	std::unordered_map<uint64_t, uint64_t>              m_acks;
 }; // LeaderData
 
 struct PotentialLeaderData
@@ -79,27 +79,27 @@ public:
 	handle_leader_active_ack(uint64_t ts, const LeaderActiveAck& msg);
 
 	void
-	client_confirm_append(uint64_t commit)
+	client_confirm_append(uint64_t round, uint64_t commit)
 	{
 		if (m_state != Follower) {
 			return;
 		}
 
 		// Send ack.
-		LeaderActiveAck ack(m_id, m_seq, commit, m_round);
+		LeaderActiveAck ack(m_id, m_seq, commit, round);
 		m_registry.send_to_id(m_follower_data->m_current_leader, &ack);
 	}
 
 	void
-	send_append(std::string append_content, std::function<void(int, void*)> cb, void* data)
+	send_append(std::string append_content, std::function<void(int, uint64_t, uint64_t, void*)> cb, void* data)
 	{
 		if (m_state != Leader) {
-			cb(-1, data);
+			cb(-1, 0, 0, data);
 			return;
 		}
 		if (m_leader_data->m_callback != nullptr) {
 			// There's already a pending append.
-			cb(-2, data);
+			cb(-2, 0, 0, data);
 			return;
 		}
 		m_leader_data->m_callback = cb;
@@ -119,8 +119,9 @@ public:
 	}
 
 	void
-	set_committed(uint64_t commit)
+	set_committed(uint64_t round, uint64_t commit)
 	{
+		m_round = round;
 		m_commit = commit;
 	}
 
