@@ -5,22 +5,28 @@ The [Background](https://github.com/Preetam/libab/blob/master/background.md) has
 
 ## Dependencies and Building
 
-You will need a compiler that supports C++14. Linux, OS X, and FreeBSD are supported at the moment.
+Linux, OS X, and FreeBSD are supported at the moment.
 Builds may succeed with other BSDs, but they have not been verified.
 
-If you're using FreeBSD, you will need to install `libexecinfo`. You can do that using `pkg`:
+**All platforms**
 
-```sh
-pkg install libexecinfo
-```
+- Submodules
+  - `git submodule update --init --recursive`
+- CMake 3.0 or higher
+- A compiler that supports C++14
 
-This repository uses submodules. The following will fetch them if you haven't done so already:
+**Linux**
 
-```sh
-git submodule update --init --recursive
-```
+Continue to [Building](#building).
 
-You will also need CMake version 3.0 or higher.
+**OS X**
+
+Continue to [Building](#building).
+
+**FreeBSD**
+
+- libexecinfo
+  - `pkg install libexecinfo`
 
 ### Building
 
