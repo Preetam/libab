@@ -28,13 +28,13 @@ Role :: periodic_leader(uint64_t ts) {
 			if (max_commit > m_commit) {
 				m_commit = max_commit;
 				if (m_client_callbacks.on_commit != nullptr) {
-					m_client_callbacks.on_commit(m_commit, m_client_callbacks_data);
+					m_client_callbacks.on_commit(m_round, m_commit, m_client_callbacks_data);
 				}
 
 				if (m_leader_data->m_pending_commit == m_commit) {
 					if (m_leader_data->m_callback != nullptr) {
 						// Append was confirmed by a majority.
-						m_leader_data->m_callback(0, m_leader_data->m_callback_data);
+						m_leader_data->m_callback(0, m_round, m_commit, m_leader_data->m_callback_data);
 						m_leader_data->m_callback = nullptr;
 						m_leader_data->m_callback_data = nullptr;
 					}
@@ -59,7 +59,7 @@ Role :: periodic_leader(uint64_t ts) {
 		}
 		if (m_leader_data->m_callback != nullptr) {
 			// Append was not confirmed by a majority.
-			m_leader_data->m_callback(-1, m_leader_data->m_callback_data);
+			m_leader_data->m_callback(-1, 0, 0, m_leader_data->m_callback_data);
 			m_leader_data->m_callback = nullptr;
 			m_leader_data->m_callback_data = nullptr;
 		}
@@ -125,7 +125,7 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 			if (m_state == Leader) {
 				if (m_leader_data->m_callback != nullptr) {
 					// Append was not confirmed by a majority.
-					m_leader_data->m_callback(-1, m_leader_data->m_callback_data);
+					m_leader_data->m_callback(-1, 0, 0, m_leader_data->m_callback_data);
 					m_leader_data->m_callback = nullptr;
 					m_leader_data->m_callback_data = nullptr;
 				}
@@ -159,7 +159,7 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 		m_commit = msg.committed;
 		if (msg.round == m_round) {
 			if (m_client_callbacks.on_commit != nullptr) {
-				m_client_callbacks.on_commit(m_commit, m_client_callbacks_data);
+				m_client_callbacks.on_commit(m_round, m_commit, m_client_callbacks_data);
 			}
 		}
 	}
@@ -171,7 +171,7 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 	if (msg.next != 0) {
 		if (m_client_callbacks.on_append != nullptr) {
 			m_seq = msg.seq;
-			m_client_callbacks.on_append(msg.next, msg.next_content.c_str(),
+			m_client_callbacks.on_append(m_round, msg.next, msg.next_content.c_str(),
 				msg.next_content.size(), m_client_callbacks_data);
 			m_follower_data->m_last_leader_active = ts;
 			return;
