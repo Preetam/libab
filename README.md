@@ -1,4 +1,5 @@
-# libab
+# ![libab](https://cloud.githubusercontent.com/assets/379404/14627354/8b207cb0-05c1-11e6-869b-4d8d33e369ee.png)
+
 [![Circle CI](https://circleci.com/gh/Preetam/libab.svg?style=svg&circle-token=2aa19d53d438447eae03021c0e99571e8ceb5207)](https://circleci.com/gh/Preetam/libab) [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/Preetam/libab/blob/master/LICENSE)
 
 The [Background](https://github.com/Preetam/libab/blob/master/background.md) has details about this projects.
