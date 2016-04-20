@@ -61,8 +61,8 @@ type CallbackHandler interface {
 // and cluster size.
 // The ID should be unique across the cluster.
 // The listen address can be either an IPv4 or IPv6 address in the following forms:
-// - 127.0.0.1:2020
-// - [::1]:2020
+// 	"127.0.0.1:2020"
+// 	"[::1]:2020"
 // The cluster size is the size of the entire cluster including this node.
 func NewNode(id uint64,
 	listen string,
