@@ -1,17 +1,22 @@
 #include <memory>
 #include <cstring>
+#include <cryptopp/aes.h>
+#include <cryptopp/modes.h>
 
 #include "message.hpp"
+#include "codec.hpp"
 
 /**
  * A message header has 4 fields:
  * - length (4 bytes)
+ * - hmac (32 bytes)
+ * - iv (16 bytes)
  * - type (1 byte)
  * - flags (1 byte)
  * - id (8 bytes)
- * Total: 14 bytes
+ * Total: 62 bytes
  */
-#define MSG_HEADER_SIZE 14
+#define MSG_HEADER_SIZE 62
 
 int
 Message :: pack(uint8_t* dest, int dest_len) const {
@@ -23,6 +28,12 @@ Message :: pack(uint8_t* dest, int dest_len) const {
 	write32be(length, dest);
 	dest += 4;
 	dest_len -= 4;
+	memcpy(dest, hmac, 32);
+	dest += 32;
+	dest_len -= 32;
+	memcpy(dest, iv, 16);
+	dest += 16;
+	dest_len -= 16;
 	write8be(type, dest);
 	dest++;
 	dest_len--;
@@ -56,6 +67,10 @@ Message :: unpack(uint8_t* src, int src_len) {
 	if (src_len < length) {
 		return -2;
 	}
+	memcpy(hmac, src, 32);
+	src += 32;
+	memcpy(iv, src, 16);
+	src += 16;
 	type = read8be(src);
 	src++;
 	flags = read8be(src);
@@ -67,10 +82,31 @@ Message :: unpack(uint8_t* src, int src_len) {
 }
 
 int
-decode_message(std::unique_ptr<Message>& m, uint8_t* src, int src_len) {
-	assert(src_len >= 5);
+Codec :: decode_message(std::unique_ptr<Message>& m, uint8_t* src, int src_len) {
+	if (src_len < MSG_HEADER_SIZE) {
+		return -1;
+	}
+
+	// Verify HMAC
+	CryptoPP::SHA3_256 hash;
+	uint8_t digest[CryptoPP::SHA3_256::DIGESTSIZE];
+	std::string hashedData = m_key + std::string((const char*)(src+36), src_len-36);
+	hash.Update((const byte*)hashedData.c_str(), hashedData.size());
+	hash.Final(digest);
+	for (int i = 0; i < CryptoPP::SHA3_256::DIGESTSIZE; i++) {
+		if (src[4+i] != digest[i]) {
+			return -2;
+		}
+	}
+
+	if (m_key != "") {
+		CryptoPP::CFB_Mode<CryptoPP::AES>::Decryption cfbDecryption((const byte*)m_key.c_str(),
+			m_key.size(), src+36);
+		cfbDecryption.ProcessData(src+52, src+52, src_len-52);
+	}
+
 	// Peek at the message type
-	switch (src[4]) {
+	switch (src[52]) {
 	case MSG_IDENT_REQUEST:
 		m = std::make_unique<IdentityRequest>();
 		break;
@@ -91,7 +127,32 @@ decode_message(std::unique_ptr<Message>& m, uint8_t* src, int src_len) {
 }
 
 int
-decode_message_length(uint8_t* src, int src_len) {
+Codec :: pack_message(const Message* m, uint8_t* dest, int dest_len) {
+	auto ret = m->pack(dest, dest_len);
+	if (ret < 0) {
+		return ret;
+	}
+	if (m_key != "") {
+		// Encryption enabled
+		// Generate IV.
+		m_rng.GenerateBlock(dest+36, CryptoPP::AES::BLOCKSIZE);
+
+		// Encrypt
+		CryptoPP::CFB_Mode<CryptoPP::AES>::Encryption cfbEncryption((const byte*)m_key.c_str(),
+			m_key.size(), dest+36);
+		cfbEncryption.ProcessData(dest+52, dest+52, m->packed_size()-52);
+	}
+
+	CryptoPP::SHA3_256 hash;
+	std::string hashedData = m_key + std::string((const char*)(dest+36), m->packed_size()-36);
+	hash.Update((const byte*)hashedData.c_str(), hashedData.size());
+	hash.Final(dest+4);
+
+	return 0;
+}
+
+int
+Codec :: decode_message_length(uint8_t* src, int src_len) {
 	if (src_len < 4) {
 		return -1;
 	}
