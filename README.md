@@ -32,7 +32,7 @@ Continue to [Building](#building).
 ### Building
 
 ```sh
-mkdir build && cd build
+cd build
 cmake ..
 make
 sudo make install # Optional
