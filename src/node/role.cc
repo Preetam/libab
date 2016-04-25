@@ -126,7 +126,6 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 		if (msg.id < m_id) {
 			// Other node has more authority. Drop down to follower state.
 			DLOG(INFO) << "dropping to follower state";
-			m_leader_data = nullptr;
 			if (m_state == Leader) {
 				if (m_leader_data->m_callback != nullptr) {
 					// Append was not confirmed by a majority.
@@ -134,9 +133,10 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 					m_leader_data->m_callback = nullptr;
 					m_leader_data->m_callback_data = nullptr;
 				}
-				m_potential_leader_data = nullptr;
+				m_leader_data = nullptr;
 			}
 			m_follower_data = std::make_unique<FollowerData>();
+			m_potential_leader_data = nullptr;
 			m_state = Follower;
 			m_follower_data->m_current_leader = msg.id;
 		} else {
