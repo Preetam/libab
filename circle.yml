@@ -16,4 +16,4 @@ test:
   override:
     - cd build && make -j
     - cd build && sudo make install
-    - cd go && go build
+    - cd go/ab && go build
