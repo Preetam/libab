@@ -40,6 +40,13 @@ Role :: periodic_leader(uint64_t ts) {
 				m_commit = m_leader_data->m_pending_commit;
 				m_leader_data->m_pending_commit = 0;
 			}
+		} else {
+			if (m_leader_data->m_pending_commit == 0 && max_commit > m_commit) {
+				m_commit = max_commit;
+				if (m_client_callbacks.on_commit != nullptr) {
+					m_client_callbacks.on_commit(m_round, m_commit, m_client_callbacks_data);
+				}
+			}
 		}
 
 		++m_seq;
@@ -128,12 +135,18 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 					m_leader_data->m_callback = nullptr;
 					m_leader_data->m_callback_data = nullptr;
 				}
+				if (m_client_callbacks.lost_leadership != nullptr) {
+					m_client_callbacks.lost_leadership(m_client_callbacks_data);
+				}
 				m_leader_data = nullptr;
 			}
 			m_follower_data = std::make_unique<FollowerData>();
 			m_potential_leader_data = nullptr;
 			m_state = Follower;
 			m_follower_data->m_current_leader = msg.id;
+			if (m_client_callbacks.on_leader_change != nullptr) {
+				m_client_callbacks.on_leader_change(msg.id, m_client_callbacks_data);
+			}
 		} else {
 			if (msg.round > m_round) {
 				m_round = msg.round;
@@ -154,6 +167,9 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 	if (m_follower_data->m_current_leader > msg.id) {
 		// Our current leader is less authoritative. Replace.
 		m_follower_data->m_current_leader = msg.id;
+		if (m_client_callbacks.on_leader_change != nullptr) {
+			m_client_callbacks.on_leader_change(msg.id, m_client_callbacks_data);
+		}
 		m_follower_data->m_pending_commit = 0;
 	}
 
@@ -162,6 +178,11 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 			m_follower_data->m_pending_commit = 0;
 			LeaderActiveAck ack(m_id, msg.seq, msg.committed, m_round);
 			m_registry.send(msg.source, &ack);
+			if (m_follower_data->m_current_leader != msg.id) {
+				if (m_client_callbacks.on_leader_change != nullptr) {
+					m_client_callbacks.on_leader_change(msg.id, m_client_callbacks_data);
+				}
+			}
 			m_follower_data->m_current_leader = msg.id;
 			m_follower_data->m_last_leader_active = ts;
 			return;
@@ -192,6 +213,11 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 	// Send ack.
 	LeaderActiveAck ack(m_id, msg.seq, m_commit, m_round);
 	m_registry.send(msg.source, &ack);
+	if (m_follower_data->m_current_leader != msg.id) {
+		if (m_client_callbacks.on_leader_change != nullptr) {
+			m_client_callbacks.on_leader_change(msg.id, m_client_callbacks_data);
+		}
+	}
 	m_follower_data->m_current_leader = msg.id;
 	m_follower_data->m_last_leader_active = ts;
 }
