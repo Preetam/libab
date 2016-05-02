@@ -28,7 +28,7 @@ Role :: periodic_leader(uint64_t ts) {
 		if (max_commit == m_leader_data->m_pending_commit && max_commit > 0) {
 			if (m_leader_data->m_callback != nullptr) {
 				// Append was confirmed by a majority.
-				m_leader_data->m_callback(0, m_round, m_commit, m_leader_data->m_callback_data);
+				m_leader_data->m_callback(0, m_round, m_leader_data->m_pending_commit, m_leader_data->m_callback_data);
 				m_leader_data->m_callback = nullptr;
 				m_leader_data->m_callback_data = nullptr;
 			} else {
@@ -171,6 +171,14 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 			m_client_callbacks.on_leader_change(msg.id, m_client_callbacks_data);
 		}
 		m_follower_data->m_pending_commit = 0;
+	} else {
+		if (m_follower_data->m_current_leader < msg.id) {
+			return;
+		}
+	}
+
+	if (msg.round > m_round) {
+		m_round = msg.round;
 	}
 
 	if (msg.committed > m_commit) {
@@ -188,15 +196,9 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 			return;
 		}
 		m_commit = msg.committed;
-		if (msg.round == m_round) {
-			if (m_client_callbacks.on_commit != nullptr) {
-				m_client_callbacks.on_commit(m_round, m_commit, m_client_callbacks_data);
-			}
+		if (m_client_callbacks.on_commit != nullptr) {
+			m_client_callbacks.on_commit(m_round, m_commit, m_client_callbacks_data);
 		}
-	}
-
-	if (msg.round > m_round) {
-		m_round = msg.round;
 	}
 
 	if (msg.next != 0) {
