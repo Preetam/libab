@@ -21,7 +21,7 @@ Builds may succeed with other BSDs, but they have not been verified.
 **All platforms**
 
 - Submodules
-  - `git submodule update --init --recursive --depth 1`
+  - `git submodule update --init --recursive`
 - CMake 3.0 or higher
 - A compiler that supports C++14
 
