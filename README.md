@@ -10,8 +10,8 @@ provides powerful properties for broadcasted messages:
 
 Traffic is sent over TCP with transparent reconnections.
 
-Encryption is also supported and is implemented using CFB mode AES with a shared key (provided
-by the user).
+Encryption is also supported and is implemented using [tweetnacl](https://tweetnacl.cr.yp.to/)
+with a shared key (provided by the user).
 
 ## Dependencies and Building
 
