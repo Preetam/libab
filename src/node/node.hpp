@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include <thread>
 #include <memory>
 #include <cerrno>
@@ -26,9 +27,11 @@ public:
 	, m_cluster_size(cluster_size)
 	, m_peer_registry(std::make_unique<PeerRegistry>())
 	, m_codec(std::make_shared<Codec>())
+	, m_index_counter(0)
 	, m_trusted_peer(0)
 	, m_last_leader_active(uv_hrtime())
 	, m_role(std::make_unique<Role>(*m_peer_registry, id, cluster_size))
+	, m_mutex(std::make_unique<std::mutex>())
 	{
 		m_role->set_callbacks(callbacks, callbacks_data);
 	}
@@ -39,7 +42,7 @@ public:
 	start(std::string address);
 
 	// run starts the main processing routine.
-	void
+	int
 	run();
 
 	// connect_to_peer connects to a peer with the given
@@ -105,11 +108,50 @@ public:
 		m_codec->set_key(key);
 	}
 
+	// shutdown shuts down the Node's event loop and cleans up resources.
+	void
+	shutdown()
+	{
+		uv_async_init(m_uv_loop.get(), &m_async, [](uv_async_t* handle) {
+			auto self = (Node*)(handle->data);
+			auto timer = self->m_timer.get();
+			uv_timer_stop(timer);
+
+			uv_close((uv_handle_t*)timer, [](uv_handle_t* handle) {
+				auto self = (Node*)(handle->data);
+				auto tcp = self->m_tcp.get();
+				auto loop = self->m_uv_loop.get();
+
+				self->m_peer_registry = nullptr;
+
+				uv_close((uv_handle_t*)tcp, [](uv_handle_t* handle) {
+					auto self = (Node*)(handle->data);
+					auto loop = self->m_uv_loop.get();
+
+					uv_walk(loop, [](uv_handle_t* handle, void* arg) {
+						if (uv_is_closing(handle) == 0) {
+							uv_close(handle, [](uv_handle_t* h){});
+						}
+					}, nullptr);
+				});
+			});
+		});
+		m_async.data = this;
+		uv_async_send(&m_async);
+	}
+
+	~Node()
+	{
+		std::lock_guard<std::mutex> lock(*m_mutex);
+		uv_loop_close(m_uv_loop.get());
+	}
+
 private:
 	uint64_t                      m_id;
 	std::string                   m_listen_address;
 	std::unique_ptr<uv_loop_t>    m_uv_loop;
 	std::unique_ptr<uv_tcp_t>     m_tcp;
+	std::unique_ptr<uv_timer_t>   m_timer;
 	std::unique_ptr<PeerRegistry> m_peer_registry;
 	std::shared_ptr<Codec>        m_codec;
 	int                           m_index_counter;
@@ -120,6 +162,9 @@ private:
 	uint64_t                      m_trusted_peer;
 	uint64_t                      m_last_leader_active;
 	std::unique_ptr<Role>         m_role; // TODO
+
+	std::unique_ptr<std::mutex>   m_mutex;
+	uv_async_t                    m_async;
 
 	void
 	periodic();
