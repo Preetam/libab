@@ -18,6 +18,11 @@ add_executable(main
 	src/main.cc
 )
 
+add_executable(abtest
+	test/catch.cc
+	test/role.cc
+)
+
 add_library(ab SHARED
 	src/message/message.cc
 	src/message/randombytes.cc
@@ -30,6 +35,10 @@ add_library(ab SHARED
 
 target_link_libraries(ab uv)
 target_link_libraries(main ab)
+target_link_libraries(abtest ab)
 
 install(TARGETS ab DESTINATION lib)
 install(FILES include/ab.h DESTINATION include)
+
+add_test(NAME abtest COMMAND abtest)
+enable_testing(true)
