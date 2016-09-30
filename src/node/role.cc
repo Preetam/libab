@@ -17,50 +17,69 @@ Role :: periodic(uint64_t ts) {
 
 void
 Role :: periodic_leader(uint64_t ts) {
-	if (m_leader_data->m_pending_commit == 0) {
-		// No pending commit.
+	if (m_leader_data->m_pending_round == 0) {
+		// No pending round.
 		if (ts - m_leader_data->m_last_broadcast < 50e6) {
 			// Not enough time has passed to send a regular heartbeat.
 			return;
 		}
 	}
 	if (m_leader_data->m_acks.size() >= m_cluster_size/2) {
-		uint64_t max_commit = m_commit;
+		// Received required votes.
+		uint64_t max_round = m_round;
 		for (auto it = m_leader_data->m_acks.begin(); it != m_leader_data->m_acks.end(); ++it) {
-			if (it->second > max_commit) {
-				max_commit = it->second;
+			if (it->second > max_round) {
+				max_round = it->second;
 			}
 		}
-		if (max_commit == m_leader_data->m_pending_commit && max_commit > 0) {
+		auto pending_round_votes = 0;
+		for (auto it = m_leader_data->m_acks.begin(); it != m_leader_data->m_acks.end(); ++it) {
+			if (it->second == max_round) {
+				pending_round_votes++;
+			}
+		}
+
+		if (m_leader_data->m_pending_round > 0) {
+			// There's a pending append.
+			if (max_round != m_leader_data->m_pending_round ||
+				pending_round_votes < m_cluster_size/2) {
+				// Not enough votes for the pending append
+				// We need to forfeit leadership.
+				if (m_leader_data->m_callback != nullptr) {
+					// Append was not confirmed by a majority.
+					m_leader_data->m_callback(-1, m_leader_data->m_callback_data);
+					m_leader_data->m_callback = nullptr;
+					m_leader_data->m_callback_data = nullptr;
+					m_leader_data->m_pending_round = 0;
+				}
+				m_leader_data = nullptr;
+				m_state = PotentialLeader;
+				m_potential_leader_data = std::make_unique<PotentialLeaderData>();
+				return;
+			}
+
 			if (m_leader_data->m_callback != nullptr) {
 				// Append was confirmed by a majority.
-				m_leader_data->m_callback(0, m_round, m_leader_data->m_pending_commit, m_leader_data->m_callback_data);
+				m_leader_data->m_callback(0, m_leader_data->m_callback_data);
 				m_leader_data->m_callback = nullptr;
 				m_leader_data->m_callback_data = nullptr;
-			} else {
-				// Majority have acknowledged the commit
-				// Report that to the client
-				if (m_client_callbacks.on_commit != nullptr) {
-					m_client_callbacks.on_commit(m_round, m_leader_data->m_pending_commit, m_client_callbacks_data);
-				}
-				m_commit = m_leader_data->m_pending_commit;
-				m_leader_data->m_pending_commit = 0;
+				m_round = m_leader_data->m_pending_round;
+				m_leader_data->m_pending_round = 0;
 			}
 		} else {
-			if (m_leader_data->m_pending_commit == 0 && max_commit > m_commit) {
-				m_commit = max_commit;
-				if (m_client_callbacks.on_commit != nullptr) {
-					m_client_callbacks.on_commit(m_round, m_commit, m_client_callbacks_data);
-				}
+			// No pending append
+			// This is just a regular heartbeat ack.
+			if (max_round > m_round) {
+				m_round = max_round;
 			}
 		}
 
 		++m_seq;
-		auto commit = m_commit;
-		if (m_leader_data->m_pending_commit > 0) {
-			commit = m_leader_data->m_pending_commit;
+		auto round = m_round;
+		if (m_leader_data->m_pending_round > 0) {
+			round = m_leader_data->m_pending_round;
 		}
-		LeaderActiveMessage msg(m_id, m_seq, commit, m_round);
+		LeaderActiveMessage msg(m_id, m_seq, round);
 		m_registry.broadcast(&msg);
 		m_leader_data->m_last_broadcast = ts;
 		m_leader_data->m_acks.clear();
@@ -74,10 +93,10 @@ Role :: periodic_leader(uint64_t ts) {
 		}
 		if (m_leader_data->m_callback != nullptr) {
 			// Append was not confirmed by a majority.
-			m_leader_data->m_callback(-1, 0, 0, m_leader_data->m_callback_data);
+			m_leader_data->m_callback(-1, m_leader_data->m_callback_data);
 			m_leader_data->m_callback = nullptr;
 			m_leader_data->m_callback_data = nullptr;
-			m_leader_data->m_pending_commit = 0;
+			m_leader_data->m_pending_round = 0;
 		}
 		m_leader_data = nullptr;
 		m_state = PotentialLeader;
@@ -100,14 +119,13 @@ Role :: periodic_potential_leader(uint64_t ts) {
 			m_leader_data->m_acks = m_potential_leader_data->m_acks;
 			m_potential_leader_data = nullptr;
 			m_state = Leader;
-			m_round++;
 			return;
 		}
 
 		// Try again.
 		++m_seq;
 		m_potential_leader_data->m_acks.clear();
-		LeaderActiveMessage msg(m_id, m_seq, m_commit, m_round);
+		LeaderActiveMessage msg(m_id, m_seq, m_round);
 		m_registry.broadcast(&msg);
 		m_potential_leader_data->m_last_broadcast = ts;
 	}
@@ -137,7 +155,7 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 			if (m_state == Leader) {
 				if (m_leader_data->m_callback != nullptr) {
 					// Append was not confirmed by a majority.
-					m_leader_data->m_callback(-1, 0, 0, m_leader_data->m_callback_data);
+					m_leader_data->m_callback(-1, m_leader_data->m_callback_data);
 					m_leader_data->m_callback = nullptr;
 					m_leader_data->m_callback_data = nullptr;
 				}
@@ -154,19 +172,13 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 				m_client_callbacks.on_leader_change(msg.id, m_client_callbacks_data);
 			}
 		} else {
-			if (msg.round > m_round) {
-				m_round = msg.round;
-			}
 			return;
 		}
 	}
 
 	if (m_id < msg.id) {
 		// We're more authoritative.
-		if (msg.round > m_round) {
-			m_round = msg.round;
-		}
-		m_follower_data->m_pending_commit = 0;
+		// Ignore this message.
 		return;
 	}
 
@@ -176,50 +188,37 @@ Role :: handle_leader_active(uint64_t ts, const LeaderActiveMessage& msg) {
 		if (m_client_callbacks.on_leader_change != nullptr) {
 			m_client_callbacks.on_leader_change(msg.id, m_client_callbacks_data);
 		}
-		m_follower_data->m_pending_commit = 0;
-	} else {
-		if (m_follower_data->m_current_leader < msg.id) {
-			return;
-		}
+		m_follower_data->m_pending_round = 0;
+	} else if (m_follower_data->m_current_leader < msg.id) {
+		// Less authoritative than the current leader.
+		// Ignore this message.
+		return;
 	}
 
 	if (msg.round > m_round) {
 		m_round = msg.round;
 	}
 
-	if (msg.committed > m_commit) {
-		if (m_follower_data->m_pending_commit == msg.committed) {
-			m_follower_data->m_pending_commit = 0;
-			LeaderActiveAck ack(m_id, msg.seq, msg.committed, m_round);
-			m_registry.send_to_index(msg.source, &ack);
-			if (m_follower_data->m_current_leader != msg.id) {
-				if (m_client_callbacks.on_leader_change != nullptr) {
-					m_client_callbacks.on_leader_change(msg.id, m_client_callbacks_data);
-				}
-			}
-			m_follower_data->m_current_leader = msg.id;
-			m_follower_data->m_last_leader_active = ts;
-			return;
-		}
-		m_commit = msg.committed;
-		if (m_client_callbacks.on_commit != nullptr) {
-			m_client_callbacks.on_commit(m_round, m_commit, m_client_callbacks_data);
-		}
+	if (m_follower_data->m_pending_round != 0) {
+		// We haven't confirmed a previous append.
+		// Ignore all other messages.
 	}
 
 	if (msg.next != 0) {
+		// Append message
 		if (m_client_callbacks.on_append != nullptr) {
 			m_seq = msg.seq;
-			m_client_callbacks.on_append(m_round, msg.next, msg.next_content.c_str(),
+			m_client_callbacks.on_append(msg.next, msg.next_content.c_str(),
 				msg.next_content.size(), m_client_callbacks_data);
 			m_follower_data->m_last_leader_active = ts;
-			m_follower_data->m_pending_commit = msg.next;
+			m_follower_data->m_pending_round = msg.next;
 			return;
 		}
 	}
 
-	// Send ack.
-	LeaderActiveAck ack(m_id, msg.seq, m_commit, m_round);
+	// Normal heartbeat
+	// Send ack
+	LeaderActiveAck ack(m_id, msg.seq, m_round);
 	m_registry.send_to_index(msg.source, &ack);
 	if (m_follower_data->m_current_leader != msg.id) {
 		if (m_client_callbacks.on_leader_change != nullptr) {
@@ -237,19 +236,15 @@ Role :: handle_leader_active_ack(uint64_t ts, const LeaderActiveAck& msg) {
 		return;
 	}
 
-	if (msg.round > m_round) {
-		m_round = msg.round;
-	}
-
 	if (msg.seq != m_seq) {
 		// message is too old
 		return;
 	}
 
 	if (m_state == Leader) {
-		m_leader_data->m_acks[msg.id] = msg.committed;
+		m_leader_data->m_acks[msg.id] = msg.round;
 		periodic_leader(ts);
 	} else {
-		m_potential_leader_data->m_acks[msg.id] = msg.committed;
+		m_potential_leader_data->m_acks[msg.id] = msg.round;
 	}
 }
