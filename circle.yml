@@ -19,3 +19,4 @@ test:
     - cd build && CTEST_OUTPUT_ON_FAILURE=true make test
   post:
     - mv build/libab.so $CIRCLE_ARTIFACTS/
+    - mv include/ab.h $CIRCLE_ARTIFACTS/
