@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 
 project(libab)
 SET(CMAKE_C_FLAGS "-fPIC -march=native")
