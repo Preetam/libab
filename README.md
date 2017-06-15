@@ -18,6 +18,8 @@ with a shared key (provided by the user).
 Linux, macOS, and FreeBSD are supported at the moment.
 Builds may succeed with other BSDs, but they have not been verified.
 
+### Requirements
+
 **All platforms**
 
 - Submodules
