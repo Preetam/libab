@@ -15,7 +15,7 @@ with a shared key (provided by the user).
 
 ## Dependencies and Building
 
-Linux, OS X, and FreeBSD are supported at the moment.
+Linux, macOS, and FreeBSD are supported at the moment.
 Builds may succeed with other BSDs, but they have not been verified.
 
 **All platforms**
