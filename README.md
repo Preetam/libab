@@ -2,7 +2,7 @@
 
 [![Circle CI](https://circleci.com/gh/Preetam/libab.svg?style=svg&circle-token=2aa19d53d438447eae03021c0e99571e8ceb5207)](https://circleci.com/gh/Preetam/libab) [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/Preetam/libab/blob/master/LICENSE)
 
-libab is a C library to broadcast messages to a cluster of nodes. libab also
+libab is a C library (implemented in C++) to broadcast messages to a cluster of nodes. libab also
 provides powerful properties for broadcasted messages:
 
 1. Each successfully broadcasted message is guaranteed to be delivered to a majority of the nodes.
