@@ -26,10 +26,14 @@ enum MESSAGE_TYPE : uint8_t
 inline
 const char* MSG_STR(uint8_t type) {
 	switch (type) {
-	case MSG_IDENT_REQUEST: return "MSG_IDENT_REQUEST";
-	case MSG_IDENT: return "MSG_IDENT";
-	case MSG_LEADER_ACTIVE: return "MSG_LEADER_ACTIVE";
-	case MSG_LEADER_ACTIVE_ACK: return "MSG_LEADER_ACTIVE_ACK";
+	case MSG_IDENT_REQUEST:
+		return "MSG_IDENT_REQUEST";
+	case MSG_IDENT:
+		return "MSG_IDENT";
+	case MSG_LEADER_ACTIVE:
+		return "MSG_LEADER_ACTIVE";
+	case MSG_LEADER_ACTIVE_ACK:
+		return "MSG_LEADER_ACTIVE_ACK";
 	}
 
 	return "MSG_INVALID";

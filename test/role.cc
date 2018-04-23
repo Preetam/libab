@@ -41,7 +41,7 @@ TEST_CASE( "Role becomes PotentialLeader after timeout", "[role]" ) {
 	REQUIRE( role.round() == 0 );
 
 	REQUIRE( broadcasted != nullptr );
-	REQUIRE( broadcasted->seq == 1);
+	REQUIRE( broadcasted->seq == 1 );
 }
 
 TEST_CASE( "Follower responds to a leader heartbeat", "[role]" ) {
