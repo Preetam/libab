@@ -12,3 +12,12 @@ jobs:
       - run: cd build && make uv -j
       - run: cd build && make -j
       - run: cd build && make install
+      - store_artifacts:
+          path: /usr/local/lib/libab.so
+          destination: libab.so
+      - store_artifacts:
+          path: /usr/local/lib/libab.a
+          destination: libab.a
+      - store_artifacts:
+          path: /usr/local/lib/ab.h
+          destination: ab.h
