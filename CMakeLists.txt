@@ -13,7 +13,8 @@ include_directories(
 	dep/libuv/include
 )
 
-add_subdirectory(dep/libuv)
+set(BUILD_TESTING OFF)
+add_subdirectory(dep/libuv EXCLUDE_FROM_ALL)
 
 add_executable(main
 	src/main.cc
@@ -51,7 +52,6 @@ target_link_libraries(main ab)
 target_link_libraries(abtest ab)
 
 install(TARGETS ab DESTINATION lib)
-install(FILES build/dep/libuv/libuv.a DESTINATION lib)
 install(TARGETS ab_static DESTINATION lib)
 install(FILES include/ab.h DESTINATION include)
 
