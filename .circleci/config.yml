@@ -19,5 +19,5 @@ jobs:
           path: /usr/local/lib/libab.a
           destination: libab.a
       - store_artifacts:
-          path: /usr/local/lib/ab.h
+          path: /usr/local/include/ab.h
           destination: ab.h
