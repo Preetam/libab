@@ -9,7 +9,7 @@ jobs:
       - run: git submodule update --init --recursive
       - run: cd build && cmake -DCMAKE_C_COMPILER=/usr/bin/gcc-5 -DCMAKE_CXX_COMPILER=/usr/bin/g++-5 ..
       - run: cd build && make -t dep || true
-      - run: cd build && make uv -j
+      - run: cd build && make uv uv_a -j
       - run: cd build && make -j
       - run: cd build && make install
       - store_artifacts:
@@ -21,3 +21,9 @@ jobs:
       - store_artifacts:
           path: /usr/local/include/ab.h
           destination: ab.h
+      - store_artifacts:
+          path: /usr/local/lib/libuv.so
+          destination: libuv.so
+      - store_artifacts:
+          path: /usr/local/lib/libuv_a.a
+          destination: libuv_a.a

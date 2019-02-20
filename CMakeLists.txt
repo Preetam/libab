@@ -55,5 +55,14 @@ install(TARGETS ab DESTINATION lib)
 install(TARGETS ab_static DESTINATION lib)
 install(FILES include/ab.h DESTINATION include)
 
+install(FILES build/dep/libuv/libuv_a.a DESTINATION lib)
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+	install(FILES build/dep/libuv/libuv.dylib DESTINATION lib)
+else()
+	install(FILES build/dep/libuv/libuv.so DESTINATION lib)
+
+endif()
+
 add_test(NAME abtest COMMAND abtest)
 enable_testing(true)
