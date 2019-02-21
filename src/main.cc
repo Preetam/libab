@@ -89,6 +89,5 @@ main(int argc, char* argv[]) {
 	n->shutdown();
 	t.join();
 	n = nullptr;
-	// Unreachable
 	return 0;
 }

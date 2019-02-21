@@ -39,6 +39,11 @@ ab_run(ab_node_t* node) {
 	return node->rep->run();
 }
 
+void
+ab_shutdown(ab_node_t* node) {
+	node->rep->shutdown();
+}
+
 int
 ab_append(ab_node_t* node, const char* content, int content_len,
 	ab_append_cb cb, void* data) {

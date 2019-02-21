@@ -94,6 +94,10 @@ ab_connect_to_peer(ab_node_t* node, const char* address);
 int
 ab_run(ab_node_t* node);
 
+// ab_shutdown stops a running node.
+void
+ab_shutdown(ab_node_t* node);
+
 // ab_append_cb is the callback passed to ab_append. status is negative on failure.
 typedef void (*ab_append_cb)(int status, void* data);
 

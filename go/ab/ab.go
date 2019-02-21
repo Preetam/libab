@@ -138,6 +138,11 @@ func (n *Node) Run() error {
 	return nil
 }
 
+// Shutdown stops a running Node.
+func (n *Node) Shutdown() {
+	C.ab_shutdown(n.ptr)
+}
+
 // Append broadcasts data to the cluster.
 func (n *Node) Append(data string) error {
 	n.appendResult = make(chan appendResult)
