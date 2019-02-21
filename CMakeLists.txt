@@ -35,27 +35,12 @@ add_library(ab SHARED
 	dep/tweetnacl/tweetnacl.c
 )
 
-add_library(ab_static STATIC
-	src/message/message.cc
-	src/message/randombytes.cc
-	src/peer/peer.cc
-	src/node/node.cc
-	src/node/role.cc
-	src/c.cc
-	dep/tweetnacl/tweetnacl.c
-)
-set_target_properties(ab_static PROPERTIES OUTPUT_NAME ab)
-
 target_link_libraries(ab uv_a)
-target_link_libraries(ab_static uv_a)
 target_link_libraries(main ab)
 target_link_libraries(abtest ab)
 
 install(TARGETS ab DESTINATION lib)
-install(TARGETS ab_static DESTINATION lib)
 install(FILES include/ab.h DESTINATION include)
-
-install(FILES build/dep/libuv/libuv_a.a DESTINATION lib)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	install(FILES build/dep/libuv/libuv.dylib DESTINATION lib)

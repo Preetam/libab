@@ -16,14 +16,5 @@ jobs:
           path: /usr/local/lib/libab.so
           destination: libab.so
       - store_artifacts:
-          path: /usr/local/lib/libab.a
-          destination: libab.a
-      - store_artifacts:
           path: /usr/local/include/ab.h
           destination: ab.h
-      - store_artifacts:
-          path: /usr/local/lib/libuv.so
-          destination: libuv.so
-      - store_artifacts:
-          path: /usr/local/lib/libuv_a.a
-          destination: libuv_a.a
