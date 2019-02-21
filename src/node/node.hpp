@@ -96,10 +96,10 @@ public:
 		uv_async_send(async);
 	}
 
-	void
+	int
 	set_key(const std::string& key)
 	{
-		m_codec->set_key(key);
+		return m_codec->set_key(key);
 	}
 
 	// shutdown shuts down the Node's event loop and cleans up resources.
@@ -137,7 +137,9 @@ public:
 	~Node()
 	{
 		std::lock_guard<std::mutex> lock(*m_mutex);
-		uv_loop_close(m_uv_loop.get());
+		if (m_uv_loop != nullptr) {
+			uv_loop_close(m_uv_loop.get());
+		}
 	}
 
 private:

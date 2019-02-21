@@ -16,18 +16,18 @@ public:
 	{
 	}
 
-	void
+	int
 	set_key(const std::string& key)
 	{
 		if (key == "") {
 			m_key = "";
-			return;
+			return 0;
 		}
 		if (key.size() != KEY_SIZE) {
-			std::cerr << "libab: invalid encryption key" << std::endl;
-			exit(1);
+			return -1;
 		}
 		m_key = key;
+		return 0;
 	}
 
 	int

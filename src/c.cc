@@ -12,10 +12,10 @@ ab_node_create(uint64_t id, int cluster_size, ab_callbacks_t callbacks, void* da
 	return node;
 }
 
-void
+int
 ab_set_key(ab_node_t* node, const char* key, int key_len) {
 	std::string key_str(key, key_len);
-	node->rep->set_key(key_str);
+	return node->rep->set_key(key_str);
 }
 
 int

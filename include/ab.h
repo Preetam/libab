@@ -72,7 +72,10 @@ ab_node_t*
 ab_node_create(uint64_t id, int cluster_size, ab_callbacks_t callbacks, void* data);
 
 // ab_set_key sets the node's shared encryption key.
-void
+// This is the unmodified encryption key, so it needs to be
+// 32 bytes and cryptographically secure (use a key derivation function
+// if you need to!).
+int
 ab_set_key(ab_node_t* node, const char* key, int key_len);
 
 // ab_listen sets the listen address for the node.

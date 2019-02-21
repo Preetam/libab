@@ -104,10 +104,14 @@ func NewNode(id uint64,
 
 // SetKey sets the shared cluster encryption key.
 // This should be called before Run.
-func (n *Node) SetKey(key string) {
+func (n *Node) SetKey(key string) error {
 	cKey := C.CString(key)
 	defer C.free(unsafe.Pointer(cKey))
-	C.ab_set_key(n.ptr, cKey, C.int(len(key)))
+	ret := C.ab_set_key(n.ptr, cKey, C.int(len(key)))
+	if ret < 0 {
+		return errors.New("ab: invalid key")
+	}
+	return nil
 }
 
 // AddPeer adds a peer to the Node.

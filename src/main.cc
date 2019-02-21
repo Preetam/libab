@@ -67,7 +67,10 @@ main(int argc, char* argv[]) {
 		std::cerr << "leader is now " << leader_id << std::endl;
 	};
 	auto n = std::make_unique<Node>(id, cluster_size, callbacks, nullptr);
-	n->set_key(key);
+	if (n->set_key(key) < 0) {
+		std::cerr << "invalid key" << std::endl;
+		return 1;
+	}
 	if (n->start(addr_str) < 0) {
 		std::cerr << "failed to start" << std::endl;
 		return 1;
