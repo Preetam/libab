@@ -11,6 +11,7 @@ jobs:
       - run: cd build && make -t dep || true
       - run: cd build && make uv uv_a -j
       - run: cd build && make -j
+      - run: cd build && make test
       - run: cd build && make install
       - store_artifacts:
           path: /usr/local/lib/libab.so
