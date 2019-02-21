@@ -88,6 +88,9 @@ public:
 	virtual int
 	unpack_body(uint8_t* src, int src_len) = 0;
 
+	virtual
+	~Message() {}
+
 public:
 	int      source;
 	uint8_t  type;
