@@ -1,15 +1,13 @@
-FROM ubuntu:18.04
+FROM golang:1.11.5 
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-		build-essential \
-		make \
-		pkg-config \
-		curl \
-		cmake \
-	&& rm -rf /var/lib/apt/lists/*
+ENV LIBAB_VERSION 0.6.5
 
-VOLUME /code
-VOLUME /artifacts
-WORKDIR /artifacts
-
-CMD ["/bin/bash"]
+RUN set -eux; \
+	wget -O libab.a "https://github.com/Preetam/libab/releases/download/v$LIBAB_VERSION/libab-linux-x64.a" && \
+	wget -O libab.so "https://github.com/Preetam/libab/releases/download/v$LIBAB_VERSION/libab-linux-x64.so" && \
+	wget -O libuv.a "https://github.com/Preetam/libab/releases/download/v$LIBAB_VERSION/libuv_a-linux-x64.a" && \
+	wget -O libuv.so "https://github.com/Preetam/libab/releases/download/v$LIBAB_VERSION/libuv-linux-x64.so" && \
+	wget -O ab.h "https://github.com/Preetam/libab/releases/download/v$LIBAB_VERSION/ab.h" && \
+	mv *.a /usr/local/lib && \
+	mv *.so /usr/local/lib && \
+	mv ab.h /usr/local/include

@@ -46,8 +46,8 @@ add_library(ab_static STATIC
 )
 set_target_properties(ab_static PROPERTIES OUTPUT_NAME ab)
 
-target_link_libraries(ab uv)
-target_link_libraries(ab_static uv)
+target_link_libraries(ab uv_a)
+target_link_libraries(ab_static uv_a)
 target_link_libraries(main ab)
 target_link_libraries(abtest ab)
 
