@@ -53,6 +53,7 @@ public:
 		uv_tcp_connect(req, m_tcp.get(), reinterpret_cast<struct sockaddr*>(&sockaddr),
 			[](uv_connect_t* req, int status) {
 				auto self = (Peer*)req->data;
+				delete req;
 				if (status < 0) {
 					auto tcp_handle = self->m_tcp.release();
 					self->m_tcp = nullptr;
@@ -64,7 +65,6 @@ public:
 				self->m_active = true;
 				self->run();
 				self->send(&self->m_node_ident_msg);
-				delete req;
 			});
 	}
 
@@ -96,6 +96,7 @@ public:
 		m_tcp = std::move(rhs.m_tcp);
 		m_tcp->data = this;
 		m_address = rhs.m_address;
+		m_id = rhs.m_id;
 		m_valid = true;
 		m_active = true;
 		m_read_buf = std::move(rhs.m_read_buf);
