@@ -42,6 +42,7 @@ Role :: periodic_leader(uint64_t ts) {
 				m_leader_data = nullptr;
 				m_state = PotentialLeader;
 				m_potential_leader_data = std::make_unique<PotentialLeaderData>();
+				return;
 			} else {
 				// Not yet. Wait.
 				return;
